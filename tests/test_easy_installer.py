@@ -383,7 +383,7 @@ class TestAppIconInPlist:
         (src / "myapp").write_text("#!/bin/bash\n")
         (src / "myapp").chmod(0o755)
         icon = tmp_path / "icon.icns"
-        icon.write_text("fake icon data")
+        icon.write_text("fake icon data")  # Content doesn't matter; we only test plist reference
 
         cfg = _base_cfg(str(src), str(tmp_path / "out"),
                          target_os="mac", target_type="app",

@@ -583,7 +583,7 @@ def build_app(cfg: Config) -> str:
             f'    <string>{cfg.app_version}</string>\n'
             '    <key>CFBundlePackageType</key>\n'
             '    <string>APPL</string>\n'
-            + icon_entry +
+            f'{icon_entry}'
             '</dict>\n'
             '</plist>\n'
         )
