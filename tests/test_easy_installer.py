@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import tarfile
 import tempfile
@@ -445,14 +446,19 @@ class TestHostArchMapping:
         assert len(result) > 0
 
     def test_host_arch_matches_platform(self):
-        import platform
         machine = platform.machine().lower()
         result = _host_arch()
-        # On x86_64, should return "x86_64"
         if machine in ("x86_64", "amd64"):
             assert result == "x86_64"
         elif machine in ("aarch64", "arm64"):
             assert result == "aarch64"
+        elif machine in ("i386", "i686", "x86"):
+            assert result == "i686"
+        elif machine == "armv7l":
+            assert result == "armhf"
+        else:
+            # Unknown arch — should pass through as-is
+            assert result == machine
 
 
 class TestFlatpakArchMapping:

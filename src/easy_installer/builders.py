@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import tempfile
@@ -48,7 +49,6 @@ def _appimage_arch(arch: str) -> str:
 
 def _host_arch() -> str:
     """Return the appimagetool arch string for the current host machine."""
-    import platform
     machine = platform.machine().lower()
     mapping = {
         "x86_64": "x86_64", "amd64": "x86_64",
@@ -56,7 +56,11 @@ def _host_arch() -> str:
         "i386": "i686", "i686": "i686", "x86": "i686",
         "armv7l": "armhf",
     }
-    return mapping.get(machine, machine)
+    result = mapping.get(machine)
+    if result is None:
+        log.warning("Unknown host architecture '%s'; using as-is for appimagetool download", machine)
+        return machine
+    return result
 
 
 def _flatpak_arch(arch: str) -> str:
