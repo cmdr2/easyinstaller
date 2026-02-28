@@ -129,7 +129,8 @@ class TestBuildZip:
         # Find hello.txt inside extracted folder
         for dirpath, _, files in os.walk(extract_dir):
             if "hello.txt" in files:
-                content = open(os.path.join(dirpath, "hello.txt")).read()
+                with open(os.path.join(dirpath, "hello.txt")) as f:
+                    content = f.read()
                 assert content == "hello world"
                 return
         pytest.fail("hello.txt not found in extracted zip")
@@ -161,7 +162,8 @@ class TestBuildTarGz:
             tf.extractall(extract_dir)
         for dirpath, _, files in os.walk(extract_dir):
             if "hello.txt" in files:
-                content = open(os.path.join(dirpath, "hello.txt")).read()
+                with open(os.path.join(dirpath, "hello.txt")) as f:
+                    content = f.read()
                 assert content == "hello world"
                 return
         pytest.fail("hello.txt not found in extracted tar.gz")
@@ -190,7 +192,8 @@ class TestBuildApp:
             app_exec="myapp", app_name="TestApp", app_version="1.2.3",
         )
         result = build_app(cfg)
-        plist = open(os.path.join(result, "Contents", "Info.plist")).read()
+        with open(os.path.join(result, "Contents", "Info.plist")) as f:
+            plist = f.read()
         assert "TestApp" in plist
         assert "1.2.3" in plist
         assert "myapp" in plist

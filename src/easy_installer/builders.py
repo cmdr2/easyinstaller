@@ -573,7 +573,9 @@ def build_app(cfg: Config) -> str:
 
 # ── Dispatcher ───────────────────────────────────────────────────────────────
 
-BUILDERS: dict[str, callable] = {
+from typing import Callable
+
+BUILDERS: dict[str, Callable[[Config], str]] = {
     "zip": build_zip,
     "tar.gz": build_tar_gz,
     "nsis": build_nsis,
