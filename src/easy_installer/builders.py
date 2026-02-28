@@ -42,6 +42,10 @@ def _rpm_arch(arch: str) -> str:
     return {"x86_64": "x86_64", "arm64": "aarch64", "i386": "i686", "armhf": "armv7hl"}[arch]
 
 
+def _appimage_arch(arch: str) -> str:
+    return {"x86_64": "x86_64", "arm64": "aarch64", "i386": "i686", "armhf": "armhf"}[arch]
+
+
 def _sanitise_name(name: str) -> str:
     """Lower-case, replace non-alphanumeric with hyphens, collapse multiples."""
     import re
@@ -57,7 +61,11 @@ def build_zip(cfg: Config) -> str:
     log.info("Creating zip archive: %s", output_file)
     base_name = os.path.basename(cfg.source)
     with zipfile.ZipFile(output_file, "w", zipfile.ZIP_DEFLATED) as zf:
-        for dirpath, _dirnames, filenames in os.walk(cfg.source):
+        for dirpath, dirnames, filenames in os.walk(cfg.source):
+            # Add empty directories explicitly
+            if not filenames and not dirnames:
+                arc_dir = os.path.join(base_name, os.path.relpath(dirpath, cfg.source)) + "/"
+                zf.writestr(zipfile.ZipInfo(arc_dir), "")
             for fn in filenames:
                 abs_path = os.path.join(dirpath, fn)
                 arc_name = os.path.join(base_name, os.path.relpath(abs_path, cfg.source))
@@ -83,10 +91,14 @@ def build_nsis(cfg: Config) -> str:
     output_file = cfg.output + ".exe"
     log.info("Creating NSIS installer: %s", output_file)
 
-    # Gather file install/uninstall lines
+    # Gather file install/uninstall lines and track subdirectories
     install_lines: list[str] = []
     uninstall_lines: list[str] = []
+    subdirs: set[str] = set()
     for dirpath, _dirs, filenames in os.walk(cfg.source):
+        rel_dir = os.path.relpath(dirpath, cfg.source)
+        if rel_dir != ".":
+            subdirs.add(rel_dir.replace("/", "\\"))
         for fn in filenames:
             abs_path = os.path.join(dirpath, fn)
             rel = os.path.relpath(abs_path, cfg.source)
@@ -96,6 +108,10 @@ def build_nsis(cfg: Config) -> str:
             install_lines.append(f'  SetOutPath "$INSTDIR{out_dir}"')
             install_lines.append(f'  File "{abs_path}"')
             uninstall_lines.append(f'  Delete "$INSTDIR\\{win_rel}"')
+
+    # Remove subdirectories deepest-first so parent dirs are empty when removed
+    for d in sorted(subdirs, key=lambda p: p.count("\\"), reverse=True):
+        uninstall_lines.append(f'  RMDir "$INSTDIR\\{d}"')
 
     nsi = _NSIS_TEMPLATE.format(
         app_name=cfg.app_name,
@@ -161,14 +177,14 @@ def build_deb(cfg: Config) -> str:
 
     deb_root = tempfile.mkdtemp(prefix="easy-installer-deb-")
     try:
-        install_prefix = f"opt/{cfg.app_name}"
+        pkg_name = _sanitise_name(cfg.app_name)
+        install_prefix = f"opt/{pkg_name}"
         dest = os.path.join(deb_root, install_prefix)
         shutil.copytree(cfg.source, dest, dirs_exist_ok=True)
 
         debian_dir = os.path.join(deb_root, "DEBIAN")
         os.makedirs(debian_dir, exist_ok=True)
 
-        pkg_name = _sanitise_name(cfg.app_name)
         with open(os.path.join(debian_dir, "control"), "w") as f:
             f.write(
                 f"Package: {pkg_name}\n"
@@ -209,7 +225,7 @@ def build_rpm(cfg: Config) -> str:
             os.makedirs(os.path.join(rpm_root, d))
 
         sanitised = _sanitise_name(cfg.app_name)
-        install_prefix = f"opt/{cfg.app_name}"
+        install_prefix = f"opt/{sanitised}"
 
         # Create source tarball
         src_staging = tempfile.mkdtemp(prefix="easy-installer-rpmsrc-")
@@ -341,7 +357,7 @@ def build_appimage(cfg: Config) -> str:
         # Locate or download appimagetool
         appimagetool = shutil.which("appimagetool") or "/tmp/appimagetool"
         if not os.path.isfile(appimagetool) or not os.access(appimagetool, os.X_OK):
-            arch_suffix = "aarch64" if cfg.arch == "arm64" else "x86_64"
+            arch_suffix = _appimage_arch(cfg.arch)
             url = (
                 "https://github.com/AppImage/appimagetool/releases/"
                 f"download/continuous/appimagetool-{arch_suffix}.AppImage"
@@ -351,7 +367,7 @@ def build_appimage(cfg: Config) -> str:
             urllib.request.urlretrieve(url, appimagetool)
             os.chmod(appimagetool, 0o755)
 
-        env = {**os.environ, "ARCH": cfg.arch}
+        env = {**os.environ, "ARCH": _appimage_arch(cfg.arch)}
         try:
             _run([appimagetool, appdir, output_file], env=env)
         except subprocess.CalledProcessError:
@@ -402,7 +418,7 @@ def build_flatpak(cfg: Config) -> str:
             "sdk": "org.freedesktop.Sdk",
             "command": cfg.app_exec,
             "modules": [{
-                "name": cfg.app_name,
+                "name": _sanitise_name(cfg.app_name),
                 "buildsystem": "simple",
                 "build-commands": [
                     "mkdir -p /app/bin",
@@ -461,7 +477,7 @@ def build_snap(cfg: Config) -> str:
                 f"parts:\n"
                 f"  {sanitised}:\n"
                 f"    plugin: dump\n"
-                f"    source: ../source/\n"
+                f"    source: source/\n"
                 f"\n"
                 f"apps:\n"
                 f"  {sanitised}:\n"
@@ -541,6 +557,13 @@ def build_app(cfg: Config) -> str:
     os.chmod(launcher, 0o755)
 
     # Info.plist
+    icon_entry = ""
+    if cfg.app_icon and os.path.isfile(cfg.app_icon):
+        icon_name = os.path.basename(cfg.app_icon)
+        icon_entry = (
+            '    <key>CFBundleIconFile</key>\n'
+            f'    <string>{icon_name}</string>\n'
+        )
     with open(os.path.join(contents, "Info.plist"), "w") as f:
         f.write(
             '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -560,6 +583,7 @@ def build_app(cfg: Config) -> str:
             f'    <string>{cfg.app_version}</string>\n'
             '    <key>CFBundlePackageType</key>\n'
             '    <string>APPL</string>\n'
+            + icon_entry +
             '</dict>\n'
             '</plist>\n'
         )
