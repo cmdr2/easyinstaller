@@ -46,6 +46,23 @@ def _appimage_arch(arch: str) -> str:
     return {"x86_64": "x86_64", "arm64": "aarch64", "i386": "i686", "armhf": "armhf"}[arch]
 
 
+def _host_arch() -> str:
+    """Return the appimagetool arch string for the current host machine."""
+    import platform
+    machine = platform.machine().lower()
+    mapping = {
+        "x86_64": "x86_64", "amd64": "x86_64",
+        "aarch64": "aarch64", "arm64": "aarch64",
+        "i386": "i686", "i686": "i686", "x86": "i686",
+        "armv7l": "armhf",
+    }
+    return mapping.get(machine, machine)
+
+
+def _flatpak_arch(arch: str) -> str:
+    return {"x86_64": "x86_64", "arm64": "aarch64", "i386": "i386", "armhf": "arm"}[arch]
+
+
 def _sanitise_name(name: str) -> str:
     """Lower-case, replace non-alphanumeric with hyphens, collapse multiples."""
     import re
@@ -354,13 +371,13 @@ def build_appimage(cfg: Config) -> str:
             )
         os.chmod(apprun, 0o755)
 
-        # Locate or download appimagetool
+        # Locate or download appimagetool (must be for the HOST architecture)
         appimagetool = shutil.which("appimagetool") or "/tmp/appimagetool"
         if not os.path.isfile(appimagetool) or not os.access(appimagetool, os.X_OK):
-            arch_suffix = _appimage_arch(cfg.arch)
+            host_arch = _host_arch()
             url = (
                 "https://github.com/AppImage/appimagetool/releases/"
-                f"download/continuous/appimagetool-{arch_suffix}.AppImage"
+                f"download/continuous/appimagetool-{host_arch}.AppImage"
             )
             log.info("Downloading appimagetool from %s", url)
             import urllib.request
@@ -431,12 +448,16 @@ def build_flatpak(cfg: Config) -> str:
         with open(manifest_path, "w") as f:
             json.dump(manifest, f, indent=2)
 
+        fp_arch = _flatpak_arch(cfg.arch)
         _run(["flatpak-builder", "--user", "--force-clean",
+              "--arch", fp_arch,
               os.path.join(build_dir, "build"), manifest_path])
         _run(["flatpak", "build-export",
+              "--arch", fp_arch,
               os.path.join(build_dir, "repo"),
               os.path.join(build_dir, "build")])
         _run(["flatpak", "build-bundle",
+              "--arch", fp_arch,
               os.path.join(build_dir, "repo"),
               output_file, sanitised_id])
     finally:
@@ -538,58 +559,68 @@ def build_app(cfg: Config) -> str:
     import re
     bundle_id = "com." + re.sub(r"[^a-z0-9]", "", cfg.app_name.lower()) + ".app"
 
-    contents = os.path.join(output_file, "Contents")
-    macos = os.path.join(contents, "MacOS")
-    resources = os.path.join(contents, "Resources")
-    os.makedirs(macos)
-    os.makedirs(resources)
+    staging = tempfile.mkdtemp(prefix="easy-installer-app-")
+    try:
+        app_root = os.path.join(staging, os.path.basename(output_file))
+        contents = os.path.join(app_root, "Contents")
+        macos = os.path.join(contents, "MacOS")
+        resources = os.path.join(contents, "Resources")
+        os.makedirs(macos)
+        os.makedirs(resources)
 
-    shutil.copytree(cfg.source, resources, dirs_exist_ok=True)
+        shutil.copytree(cfg.source, resources, dirs_exist_ok=True)
 
-    # Launcher script
-    launcher = os.path.join(macos, cfg.app_exec)
-    with open(launcher, "w") as f:
-        f.write(
-            '#!/bin/bash\n'
-            'DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"\n'
-            f'exec "${{DIR}}/{cfg.app_exec}" "$@"\n'
-        )
-    os.chmod(launcher, 0o755)
+        # Launcher script
+        launcher = os.path.join(macos, cfg.app_exec)
+        with open(launcher, "w") as f:
+            f.write(
+                '#!/bin/bash\n'
+                'DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"\n'
+                f'exec "${{DIR}}/{cfg.app_exec}" "$@"\n'
+            )
+        os.chmod(launcher, 0o755)
 
-    # Info.plist
-    icon_entry = ""
-    if cfg.app_icon and os.path.isfile(cfg.app_icon):
-        icon_name = os.path.basename(cfg.app_icon)
-        icon_entry = (
-            '    <key>CFBundleIconFile</key>\n'
-            f'    <string>{icon_name}</string>\n'
-        )
-    with open(os.path.join(contents, "Info.plist"), "w") as f:
-        f.write(
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
-            ' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
-            '<plist version="1.0">\n'
-            '<dict>\n'
-            '    <key>CFBundleExecutable</key>\n'
-            f'    <string>{cfg.app_exec}</string>\n'
-            '    <key>CFBundleIdentifier</key>\n'
-            f'    <string>{bundle_id}</string>\n'
-            '    <key>CFBundleName</key>\n'
-            f'    <string>{cfg.app_name}</string>\n'
-            '    <key>CFBundleVersion</key>\n'
-            f'    <string>{cfg.app_version}</string>\n'
-            '    <key>CFBundleShortVersionString</key>\n'
-            f'    <string>{cfg.app_version}</string>\n'
-            '    <key>CFBundlePackageType</key>\n'
-            '    <string>APPL</string>\n'
-            f'{icon_entry}'
-            '</dict>\n'
-            '</plist>\n'
-        )
+        # Info.plist
+        icon_entry = ""
+        if cfg.app_icon and os.path.isfile(cfg.app_icon):
+            icon_name = os.path.basename(cfg.app_icon)
+            icon_entry = (
+                '    <key>CFBundleIconFile</key>\n'
+                f'    <string>{icon_name}</string>\n'
+            )
+        with open(os.path.join(contents, "Info.plist"), "w") as f:
+            f.write(
+                '<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
+                ' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+                '<plist version="1.0">\n'
+                '<dict>\n'
+                '    <key>CFBundleExecutable</key>\n'
+                f'    <string>{cfg.app_exec}</string>\n'
+                '    <key>CFBundleIdentifier</key>\n'
+                f'    <string>{bundle_id}</string>\n'
+                '    <key>CFBundleName</key>\n'
+                f'    <string>{cfg.app_name}</string>\n'
+                '    <key>CFBundleVersion</key>\n'
+                f'    <string>{cfg.app_version}</string>\n'
+                '    <key>CFBundleShortVersionString</key>\n'
+                f'    <string>{cfg.app_version}</string>\n'
+                '    <key>CFBundlePackageType</key>\n'
+                '    <string>APPL</string>\n'
+                f'{icon_entry}'
+                '</dict>\n'
+                '</plist>\n'
+            )
 
-    if cfg.app_icon and os.path.isfile(cfg.app_icon):
-        shutil.copy2(cfg.app_icon, os.path.join(resources, os.path.basename(cfg.app_icon)))
+        if cfg.app_icon and os.path.isfile(cfg.app_icon):
+            shutil.copy2(cfg.app_icon, os.path.join(resources, os.path.basename(cfg.app_icon)))
+
+        # Move to final location (remove existing if present)
+        if os.path.exists(output_file):
+            shutil.rmtree(output_file)
+        shutil.copytree(app_root, output_file)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
 
     log.info("Created: %s", output_file)
     return output_file
@@ -618,4 +649,10 @@ def build(cfg: Config) -> str:
     builder = BUILDERS.get(cfg.target_type)
     if builder is None:
         raise RuntimeError(f"No builder for type: {cfg.target_type}")
+
+    # Ensure the output's parent directory exists
+    out_dir = os.path.dirname(cfg.output)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
     return builder(cfg)

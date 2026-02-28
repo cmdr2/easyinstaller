@@ -12,8 +12,8 @@ import pytest
 
 from easy_installer.config import Config, ConfigError, validate_and_normalise
 from easy_installer.builders import (
-    build_zip, build_tar_gz, build_app, build_deb, build_rpm,
-    _appimage_arch, _sanitise_name,
+    build_zip, build_tar_gz, build_app, build_deb, build_rpm, build,
+    _appimage_arch, _flatpak_arch, _host_arch, _sanitise_name,
 )
 from easy_installer.cli import main
 
@@ -432,3 +432,75 @@ class TestRpmSanitisedInstallPath:
         result = build_rpm(cfg)
         assert result.endswith(".rpm")
         assert os.path.isfile(result)
+
+
+# ── Fix regression tests (session 2) ────────────────────────────────────────
+
+class TestHostArchMapping:
+    """Fix: appimagetool download must use host machine arch, not target arch."""
+
+    def test_host_arch_returns_string(self):
+        result = _host_arch()
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_host_arch_matches_platform(self):
+        import platform
+        machine = platform.machine().lower()
+        result = _host_arch()
+        # On x86_64, should return "x86_64"
+        if machine in ("x86_64", "amd64"):
+            assert result == "x86_64"
+        elif machine in ("aarch64", "arm64"):
+            assert result == "aarch64"
+
+
+class TestFlatpakArchMapping:
+    """Fix: flatpak commands must pass --arch for correct target architecture."""
+
+    def test_x86_64(self):
+        assert _flatpak_arch("x86_64") == "x86_64"
+
+    def test_arm64_maps_to_aarch64(self):
+        assert _flatpak_arch("arm64") == "aarch64"
+
+    def test_i386(self):
+        assert _flatpak_arch("i386") == "i386"
+
+    def test_armhf_maps_to_arm(self):
+        assert _flatpak_arch("armhf") == "arm"
+
+
+class TestBuildAppRobustness:
+    """Fix: build_app now uses temp dir and handles pre-existing output."""
+
+    def test_app_succeeds_on_rerun(self, source_dir, output_path):
+        cfg = _base_cfg(source_dir, output_path, target_os="mac", target_type="app", app_exec="myapp")
+        # Build twice — second run should succeed (not raise FileExistsError)
+        build_app(cfg)
+        result = build_app(cfg)
+        assert os.path.isdir(result)
+        assert os.path.isfile(os.path.join(result, "Contents", "Info.plist"))
+
+    def test_app_cleans_up_on_error(self, tmp_path):
+        """If build_app fails, no debris should remain at the output path."""
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "myapp").write_text("#!/bin/bash\n")
+        # Don't pass app_exec — this will raise RuntimeError before creating dirs
+        cfg = _base_cfg(str(src), str(tmp_path / "out"), target_os="mac", target_type="app")
+        with pytest.raises(RuntimeError, match="app-exec is required"):
+            build_app(cfg)
+        # Output directory should not exist
+        assert not os.path.exists(str(tmp_path / "out") + ".app")
+
+
+class TestOutputParentDirCreation:
+    """Fix: build() now auto-creates the output's parent directory."""
+
+    def test_creates_parent_dir(self, source_dir, tmp_path):
+        nested_output = str(tmp_path / "new" / "nested" / "dir" / "output")
+        cfg = _base_cfg(source_dir, nested_output, target_type="zip")
+        result = build(cfg)
+        assert os.path.isfile(result)
+        assert result.endswith(".zip")
