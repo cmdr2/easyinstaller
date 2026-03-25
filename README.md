@@ -68,7 +68,7 @@ easyinstaller --source ./build --os windows --arch x86_64 --type nsis \
 
 ## External dependencies
 
-The archive types (`zip`, `tar.gz`) and plain `.app` bundles are built with pure Python when notarization is not enabled.
+The archive types (`zip`, `tar.gz`) and plain `.app` bundles can be built without additional tools.
 
 Other formats require the corresponding tool to be installed on the build machine:
 
