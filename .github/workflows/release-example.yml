@@ -312,21 +312,23 @@ jobs:
       - name: Import signing certificate
         if: steps.check-signing.outputs.enabled == 'true'
         shell: bash
-        env:
-          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
         run: |
           printf '%s' "${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}" | base64 --decode > cert.p12
-          if ! openssl pkcs12 -in cert.p12 -passin env:MAC_CERTIFICATE_PASSWORD -noout >/dev/null; then
+          if ! openssl pkcs12 -in cert.p12 -passin pass:"${{ secrets.MAC_CERTIFICATE_PASSWORD }}" -noout >/dev/null; then
             echo "Decoded cert.p12 could not be opened with MAC_CERTIFICATE_PASSWORD."
             echo "Make sure MAC_CERTIFICATE_P12_BASE64 was created from developer-id.p12 and MAC_CERTIFICATE_PASSWORD matches the Export Password used by openssl pkcs12 -export."
             exit 1
           fi
-          openssl pkcs12 -in cert.p12 -passin env:MAC_CERTIFICATE_PASSWORD -nodes -out cert.pem
-          openssl pkcs12 -export -legacy -in cert.pem -out cert-compat.p12 -passout env:MAC_CERTIFICATE_PASSWORD
+          openssl pkcs12 -in cert.p12 -passin pass:"${{ secrets.MAC_CERTIFICATE_PASSWORD }}" -nodes -out cert.pem
+          openssl pkcs12 -export -in cert.pem -out cert-compat.p12 \
+            -passout pass:"${{ secrets.MAC_CERTIFICATE_PASSWORD }}" \
+            -keypbe PBE-SHA1-3DES \
+            -certpbe PBE-SHA1-3DES \
+            -macalg sha1
           security create-keychain -p "$RUNNER_TEMP" build.keychain
           security unlock-keychain -p "$RUNNER_TEMP" build.keychain
           security default-keychain -s build.keychain
-          security import cert-compat.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security import cert-compat.p12 -k build.keychain -P "${{ secrets.MAC_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
           security list-keychains -d user -s build.keychain
 
