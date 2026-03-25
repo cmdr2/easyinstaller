@@ -13,14 +13,14 @@ add_library(easyinstaller_name SHARED
 target_include_directories(easyinstaller_name PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(easyinstaller_name PRIVATE EASYINSTALLER_NAME_EXPORTS)
 
-add_executable(hello_easyinstaller
+add_executable(demo_easyinstaller
     main.cpp
 )
 
-target_link_libraries(hello_easyinstaller PRIVATE easyinstaller_name)
+target_link_libraries(demo_easyinstaller PRIVATE easyinstaller_name)
 
 if(APPLE)
-    set_target_properties(hello_easyinstaller PROPERTIES
+    set_target_properties(demo_easyinstaller PROPERTIES
         BUILD_RPATH "@loader_path"
         INSTALL_RPATH "@loader_path"
     )
@@ -28,13 +28,13 @@ if(APPLE)
         MACOSX_RPATH ON
     )
 elseif(UNIX)
-    set_target_properties(hello_easyinstaller PROPERTIES
+    set_target_properties(demo_easyinstaller PROPERTIES
         BUILD_RPATH "$ORIGIN"
         INSTALL_RPATH "$ORIGIN"
     )
 endif()
 
-install(TARGETS hello_easyinstaller easyinstaller_name
+install(TARGETS demo_easyinstaller easyinstaller_name
     RUNTIME DESTINATION .
     LIBRARY DESTINATION .
     ARCHIVE DESTINATION .

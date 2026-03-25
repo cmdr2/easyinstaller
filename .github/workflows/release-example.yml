@@ -1,6 +1,7 @@
 name: Release Example Packages
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 
@@ -9,7 +10,9 @@ permissions:
 
 env:
   APP_NAME: DemoEasyInstaller
-  APP_EXECUTABLE: demo_easyinstaller
+  APP_BINARY_NAME: demo_easyinstaller
+  PACKAGE_NAME: demoeasyinstaller
+  FLATPAK_APP_ID: com.demoeasyinstaller.app
 
 jobs:
   build-windows:
@@ -20,6 +23,7 @@ jobs:
       TARGET_ARCH: x86_64
       RELEASE_DIR: example/release/windows-x86_64
       OUTPUT_DIR: dist/windows
+      APP_EXECUTABLE: demo_easyinstaller.exe
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -33,7 +37,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .
+          python -m pip install . pytest
 
       - name: Install NSIS
         shell: bash
@@ -42,6 +46,21 @@ jobs:
           curl -L 'https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download' -o "$nsis_zip"
           unzip -q "$nsis_zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/nsis-3.11" >> "$GITHUB_PATH"
+
+      - name: Set package version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="0.0.0.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "APP_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          python -m pytest tests_integration -q
 
       - name: Build example release folder
         shell: bash
@@ -55,14 +74,55 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          version="${GITHUB_REF_NAME#v}"
           archive_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64-setup"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$archive_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$archive_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE"
+
+      - name: Test Windows installers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packageRoot = Split-Path -Leaf $env:RELEASE_DIR
+
+          function Invoke-DemoBinary([string]$binaryPath) {
+            if (-not (Test-Path $binaryPath)) {
+              throw "Missing binary: $binaryPath"
+            }
+
+            $output = & $binaryPath --headless
+            if ($LASTEXITCODE -ne 0) {
+              throw "Binary failed with exit code $LASTEXITCODE: $binaryPath"
+            }
+            if ($output -notmatch 'Hello easyinstaller') {
+              throw "Unexpected output from $binaryPath: $output"
+            }
+          }
+
+          $zipExtract = Join-Path $env:RUNNER_TEMP 'windows-zip'
+          $tarExtract = Join-Path $env:RUNNER_TEMP 'windows-targz'
+          $nsisInstall = Join-Path $env:RUNNER_TEMP 'windows-nsis'
+
+          Remove-Item -Recurse -Force $zipExtract, $tarExtract, $nsisInstall -ErrorAction SilentlyContinue
+          Expand-Archive -Path (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64-setup.zip') -DestinationPath $zipExtract
+          Invoke-DemoBinary (Join-Path $zipExtract $packageRoot $env:APP_EXECUTABLE)
+
+          New-Item -ItemType Directory -Path $tarExtract | Out-Null
+          tar -xzf (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64-setup.tar.gz') -C $tarExtract
+          Invoke-DemoBinary (Join-Path $tarExtract $packageRoot $env:APP_EXECUTABLE)
+
+          New-Item -ItemType Directory -Path $nsisInstall | Out-Null
+          $installer = Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64-setup.exe'
+          $arguments = @('/S', "/D=$nsisInstall")
+          $process = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "NSIS installer failed with exit code $($process.ExitCode)"
+          }
+          Invoke-DemoBinary (Join-Path $nsisInstall $env:APP_EXECUTABLE)
 
       - name: Upload Windows release assets
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -99,7 +159,22 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .
+          python -m pip install . pytest
+
+      - name: Set package version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="0.0.0.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "APP_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          python -m pytest tests_integration -q
 
       - name: Build example release folder
         shell: bash
@@ -113,18 +188,68 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          version="${GITHUB_REF_NAME#v}"
           base="$OUTPUT_DIR/demo-easyinstaller-linux-x64"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$base"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type deb --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type rpm --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type appimage --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type flatpak --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type snap --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type deb --output "$base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_BINARY_NAME"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type rpm --output "$base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_BINARY_NAME"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type appimage --output "$base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_BINARY_NAME"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type flatpak --output "$base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_BINARY_NAME"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type snap --output "$base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_BINARY_NAME"
+
+      - name: Test Linux installers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_root="$(basename "$RELEASE_DIR")"
+          zip_extract="$RUNNER_TEMP/linux-zip"
+          targz_extract="$RUNNER_TEMP/linux-targz"
+
+          run_demo() {
+            local binary_path="$1"
+            if [[ ! -x "$binary_path" ]]; then
+              echo "Missing executable: $binary_path" >&2
+              return 1
+            fi
+            local output
+            output="$($binary_path --headless)"
+            [[ "$output" == *"Hello easyinstaller"* ]]
+          }
+
+          rm -rf "$zip_extract" "$targz_extract"
+          unzip -q "$OUTPUT_DIR/demo-easyinstaller-linux-x64.zip" -d "$zip_extract"
+          run_demo "$zip_extract/$package_root/$APP_BINARY_NAME"
+
+          mkdir -p "$targz_extract"
+          tar -xzf "$OUTPUT_DIR/demo-easyinstaller-linux-x64.tar.gz" -C "$targz_extract"
+          run_demo "$targz_extract/$package_root/$APP_BINARY_NAME"
+
+          sudo dpkg -i "$OUTPUT_DIR/demo-easyinstaller-linux-x64.deb"
+          run_demo "/usr/bin/$APP_BINARY_NAME"
+          sudo dpkg -r "$PACKAGE_NAME"
+
+          sudo rpm -i "$OUTPUT_DIR/demo-easyinstaller-linux-x64.rpm"
+          run_demo "/opt/$PACKAGE_NAME/$APP_BINARY_NAME"
+          sudo rpm -e "$PACKAGE_NAME"
+
+          chmod +x "$OUTPUT_DIR/demo-easyinstaller-linux-x64.AppImage"
+          appimage_output="$("$OUTPUT_DIR/demo-easyinstaller-linux-x64.AppImage" --appimage-extract-and-run --headless)"
+          [[ "$appimage_output" == *"Hello easyinstaller"* ]]
+
+          flatpak install --user -y "$OUTPUT_DIR/demo-easyinstaller-linux-x64.flatpak"
+          flatpak_output="$(flatpak run "$FLATPAK_APP_ID" --headless)"
+          [[ "$flatpak_output" == *"Hello easyinstaller"* ]]
+          flatpak uninstall --user -y "$FLATPAK_APP_ID"
+
+          sudo snap install --dangerous "$OUTPUT_DIR/demo-easyinstaller-linux-x64.snap"
+          snap_output="$(/snap/bin/$PACKAGE_NAME --headless)"
+          [[ "$snap_output" == *"Hello easyinstaller"* ]]
+          sudo snap remove "$PACKAGE_NAME"
 
       - name: Upload Linux release assets
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -139,6 +264,7 @@ jobs:
       TARGET_ARCH: arm64
       RELEASE_DIR: example/release/macos-arm64
       OUTPUT_DIR: dist/macos
+      APP_EXECUTABLE: demo_easyinstaller
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -152,7 +278,22 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .
+          python -m pip install . pytest
+
+      - name: Set package version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="0.0.0.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "APP_VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          python -m pytest tests_integration -q
 
       - name: Check signing secrets
         id: check-signing
@@ -191,7 +332,6 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          version="${GITHUB_REF_NAME#v}"
           archive_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
           dmg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files"
           app_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
@@ -210,9 +350,62 @@ jobs:
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type dmg --output "$dmg_base" --app-name "$APP_NAME" "${notarize_args[@]}"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-dmg --output "$app_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-dmg --output "$app_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
+
+      - name: Test macOS installers
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_root="$(basename "$RELEASE_DIR")"
+          zip_extract="$RUNNER_TEMP/macos-zip"
+          targz_extract="$RUNNER_TEMP/macos-targz"
+          dmg_mount="$RUNNER_TEMP/macos-dmg-mount"
+          app_dmg_mount="$RUNNER_TEMP/macos-app-dmg-mount"
+
+          run_demo() {
+            local binary_path="$1"
+            if [[ ! -x "$binary_path" ]]; then
+              echo "Missing executable: $binary_path" >&2
+              return 1
+            fi
+            local output
+            output="$($binary_path --headless)"
+            [[ "$output" == *"Hello easyinstaller"* ]]
+          }
+
+          find_dmg_binary() {
+            if [[ -x "$1/$APP_EXECUTABLE" ]]; then
+              printf '%s\n' "$1/$APP_EXECUTABLE"
+              return 0
+            fi
+            if [[ -x "$1/$package_root/$APP_EXECUTABLE" ]]; then
+              printf '%s\n' "$1/$package_root/$APP_EXECUTABLE"
+              return 0
+            fi
+            return 1
+          }
+
+          rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount"
+          unzip -q "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip" -d "$zip_extract"
+          run_demo "$zip_extract/$package_root/$APP_EXECUTABLE"
+
+          mkdir -p "$targz_extract"
+          tar -xzf "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.tar.gz" -C "$targz_extract"
+          run_demo "$targz_extract/$package_root/$APP_EXECUTABLE"
+
+          mkdir -p "$dmg_mount"
+          hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
+          run_demo "$(find_dmg_binary "$dmg_mount")"
+          hdiutil detach "$dmg_mount"
+
+          mkdir -p "$app_dmg_mount"
+          hdiutil attach -nobrowse -readonly -mountpoint "$app_dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
+          run_demo "$app_dmg_mount/$APP_NAME.app/Contents/MacOS/$APP_EXECUTABLE"
+          hdiutil detach "$app_dmg_mount"
 
       - name: Upload macOS release assets
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
           files: |

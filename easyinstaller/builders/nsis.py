@@ -84,6 +84,8 @@ Name "{app_name}"
 OutFile "{output_file}"
 InstallDir "$PROGRAMFILES\{install_name}"
 RequestExecutionLevel admin
+SilentInstall normal
+SilentUnInstall normal
 
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES

@@ -65,7 +65,7 @@ def _build_parser() -> argparse.ArgumentParser:
     optional.add_argument(
         "--app-exec",
         default=None,
-        help="Main executable path relative to the source dir; enables the finish-page launch option for NSIS",
+        help="Main executable path relative to the source dir",
     )
     optional.add_argument("--app-icon", default=None, help="Path to application icon")
 
