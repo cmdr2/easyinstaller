@@ -93,7 +93,7 @@ jobs:
 
             $output = & $binaryPath --headless
             if ($LASTEXITCODE -ne 0) {
-              throw "Binary failed with exit code $LASTEXITCODE: $binaryPath"
+              throw "Binary failed with exit code ${LASTEXITCODE}: $binaryPath"
             }
             if ($output -notmatch 'Hello easyinstaller') {
               throw "Unexpected output from $binaryPath: $output"
