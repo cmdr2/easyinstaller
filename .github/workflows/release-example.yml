@@ -96,7 +96,7 @@ jobs:
               throw "Binary failed with exit code ${LASTEXITCODE}: $binaryPath"
             }
             if ($output -notmatch 'Hello easyinstaller') {
-              throw "Unexpected output from $binaryPath: $output"
+              throw "Unexpected output from ${binaryPath}: $output"
             }
           }
 
