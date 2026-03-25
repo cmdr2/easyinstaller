@@ -161,7 +161,7 @@ def validate_and_normalise(cfg: Config) -> Config:
                 "--mac-notary-apple-id, --mac-notary-team-id, and --mac-notary-password"
             )
 
-    # Output — resolve to absolute
+    # Output - resolve to absolute
     output = _normalise_output_path(cfg.output)
 
     # App name default

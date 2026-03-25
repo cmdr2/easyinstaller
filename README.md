@@ -2,7 +2,7 @@
 
 Create installers and archives from a release folder for any target OS.
 
-Give it a folder, pick a target platform and format, and it produces the package — zip, tar.gz, deb, rpm, AppImage, Flatpak, Snap, NSIS installer, DMG, a macOS .app bundle, or a DMG containing a .app bundle.
+Give it a folder, pick a target platform and format, and it produces the package - zip, tar.gz, deb, rpm, AppImage, Flatpak, Snap, NSIS installer, DMG, a macOS .app bundle, or a DMG containing a .app bundle.
 
 ## Supported targets
 
@@ -24,56 +24,12 @@ pip install .
 easyinstaller --source <dir> --os <os> --arch <arch> --type <type> --output <name> [options]
 ```
 
-### Required arguments
+See [docs/cli.md](docs/cli.md) for the full argument list, notarization flags, and examples.
 
-| Flag       | Description                                              |
-|------------|----------------------------------------------------------|
-| `--source` | Path to the release folder to package                    |
-| `--os`     | Target OS: `windows` (or `win`), `linux`, `mac` (or `macos`/`osx`) |
-| `--arch`   | Architecture: `x86_64`, `arm64`, `i386`, or `armhf`     |
-| `--type`   | Package type (see table above)                           |
-| `--output` | Output file name **without** extension, or a folder path whose last segment becomes the file name |
-
-### Optional metadata
-
-| Flag                | Default                                | Used by                            |
-|---------------------|----------------------------------------|------------------------------------|
-| `--app-name`        | basename of `--output`                 | deb, rpm, nsis, appimage, flatpak, snap, dmg, app |
-| `--app-version`     | `1.0.0`                                | all installer types                |
-| `--app-description` | `Application packaged with easyinstaller` | deb, rpm, snap                 |
-| `--app-maintainer`  | `maintainer@example.com`               | deb                                |
-| `--app-category`    | `Utility`                              | deb, appimage                      |
-| `--app-exec`        | *(none)*                               | appimage, flatpak, snap, app, app-in-dmg (**required**; must stay within the source tree) |
-| `--app-icon`        | *(none)*                               | appimage, app                      |
-
-### Mac notarization options
-
-Use these options with mac targets when you want easyinstaller to sign copied binaries in a staging folder, submit the final output to Apple notarization, and staple where supported.
-
-| Flag                           | Default  | Notes |
-|--------------------------------|----------|-------|
-| `--mac-notarize`               | off      | Enables signing and notarization for mac targets |
-| `--mac-sign-identity`          | *(none)* | Required with `--mac-notarize`; Developer ID Application identity used by `codesign` |
-| `--mac-notary-keychain-profile`| *(none)* | Preferred `notarytool` authentication method |
-| `--mac-notary-apple-id`        | *(none)* | Use with direct credentials if no keychain profile is configured |
-| `--mac-notary-team-id`         | *(none)* | Use with direct credentials if no keychain profile is configured |
-| `--mac-notary-password`        | *(none)* | Use with direct credentials if no keychain profile is configured |
-
-When notarization is enabled for mac targets, easyinstaller copies the source into a staging folder, recursively signs `.dylib` files and executable binaries there, builds the target from that staged content, submits the output with `xcrun notarytool submit --wait`, and then staples the result when Apple supports stapling for that format.
-
-The accepted architecture names are fixed: `x86_64`, `arm64`, `i386`, and `armhf`. easyinstaller maps those names internally for tools that expect different architecture strings.
-
-If `--output` points to a folder path, easyinstaller uses the last path segment as the base file name. For example, `--output dist/release/` creates `dist/release/release.zip` for the `zip` target.
-
-Stapling behavior by mac target:
-
-| Type         | Submitted for notarization | Stapled |
-|--------------|----------------------------|---------|
-| `zip`        | Yes                        | No      |
-| `tar.gz`     | Yes                        | No      |
-| `app`        | Yes                        | Yes, to the `.app` |
-| `dmg`        | Yes                        | Yes, to the `.dmg` |
-| `app-in-dmg` | Yes                        | Yes, to the `.dmg` |
+Guides to building installers for:
+- [Windows](docs/windows.md)
+- [Linux](docs/linux.md)
+- [macOS](docs/mac.md)
 
 ### Examples
 

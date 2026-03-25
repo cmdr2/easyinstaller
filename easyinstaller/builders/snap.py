@@ -54,7 +54,7 @@ def build_snap(cfg: Config) -> str:
                 built = os.path.join(snap_dir, filename)
                 break
         if not built:
-            raise RuntimeError("Snap build failed — no output found")
+            raise RuntimeError("Snap build failed - no output found")
         shutil.copy2(built, output_file)
     finally:
         shutil.rmtree(snap_dir, ignore_errors=True)

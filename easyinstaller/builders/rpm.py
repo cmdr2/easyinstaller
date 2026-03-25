@@ -70,7 +70,7 @@ def build_rpm(cfg: Config) -> str:
             if built:
                 break
         if not built:
-            raise RuntimeError("RPM build failed — no output found")
+            raise RuntimeError("RPM build failed - no output found")
         shutil.copy2(built, output_file)
     finally:
         shutil.rmtree(rpm_root, ignore_errors=True)
