@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+from pathlib import Path
 from typing import Optional
 
 # ── Supported values ─────────────────────────────────────────────────────────
@@ -15,7 +16,7 @@ SUPPORTED_ARCH = ("x86_64", "arm64", "i386", "armhf")
 TYPES_BY_OS: dict[str, tuple[str, ...]] = {
     "windows": ("zip", "tar.gz", "nsis"),
     "linux": ("zip", "tar.gz", "deb", "rpm", "appimage", "flatpak", "snap"),
-    "mac": ("zip", "tar.gz", "dmg", "app"),
+    "mac": ("zip", "tar.gz", "dmg", "app", "app-in-dmg"),
 }
 
 OS_ALIASES: dict[str, str] = {
@@ -25,19 +26,6 @@ OS_ALIASES: dict[str, str] = {
     "mac": "mac",
     "macos": "mac",
     "osx": "mac",
-}
-
-ARCH_ALIASES: dict[str, str] = {
-    "x86_64": "x86_64",
-    "amd64": "x86_64",
-    "x64": "x86_64",
-    "arm64": "arm64",
-    "aarch64": "arm64",
-    "i386": "i386",
-    "i686": "i386",
-    "x86": "i386",
-    "armhf": "armhf",
-    "armv7l": "armhf",
 }
 
 TYPE_ALIASES: dict[str, str] = {
@@ -53,8 +41,8 @@ TYPE_ALIASES: dict[str, str] = {
     "snap": "snap",
     "dmg": "dmg",
     "app": "app",
+    "app-in-dmg": "app-in-dmg",
 }
-
 
 # ── Data class ───────────────────────────────────────────────────────────────
 
@@ -77,6 +65,12 @@ class Config:
     app_category: str = "Utility"
     app_exec: Optional[str] = None
     app_icon: Optional[str] = None
+    mac_notarize: bool = False
+    mac_sign_identity: Optional[str] = None
+    mac_notary_keychain_profile: Optional[str] = None
+    mac_notary_apple_id: Optional[str] = None
+    mac_notary_team_id: Optional[str] = None
+    mac_notary_password: Optional[str] = None
 
 
 # ── Validation ───────────────────────────────────────────────────────────────
@@ -84,6 +78,26 @@ class Config:
 
 class ConfigError(Exception):
     """Raised when configuration is invalid."""
+
+
+def _normalise_output_path(output: str) -> str:
+    output_path = Path(output).expanduser()
+    if not output_path.is_absolute():
+        output_path = Path.cwd() / output_path
+
+    output_text = output.replace("/", os.sep).replace("\\", os.sep)
+    looks_like_dir = output_text.endswith(os.sep)
+    if not looks_like_dir and output_path.exists() and output_path.is_dir():
+        looks_like_dir = True
+
+    if looks_like_dir:
+        parent = output_path if output_path.name else output_path.parent
+        filename = parent.name
+        if not filename:
+            raise ConfigError(f"Output path must include a folder name: {output}")
+        output_path = parent / filename
+
+    return str(output_path)
 
 
 def validate_and_normalise(cfg: Config) -> Config:
@@ -99,11 +113,6 @@ def validate_and_normalise(cfg: Config) -> Config:
     if target_os is None:
         raise ConfigError(f"Unsupported OS: {cfg.target_os}. " f"Use one of: {', '.join(SUPPORTED_OS)}")
 
-    # Arch
-    arch = ARCH_ALIASES.get(cfg.arch.lower())
-    if arch is None:
-        raise ConfigError(f"Unsupported arch: {cfg.arch}. " f"Use one of: {', '.join(SUPPORTED_ARCH)}")
-
     # Type
     target_type = TYPE_ALIASES.get(cfg.target_type.lower())
     if target_type is None:
@@ -116,8 +125,25 @@ def validate_and_normalise(cfg: Config) -> Config:
             f"Type '{target_type}' is not supported for {target_os}. " f"Use one of: {', '.join(allowed)}"
         )
 
+    # Arch
+    if cfg.arch not in SUPPORTED_ARCH:
+        raise ConfigError(f"Unsupported arch: {cfg.arch}. " f"Use one of: {', '.join(SUPPORTED_ARCH)}")
+
+    if cfg.mac_notarize:
+        if target_os != "mac":
+            raise ConfigError("--mac-notarize is only supported for mac targets")
+        if not cfg.mac_sign_identity:
+            raise ConfigError("--mac-notarize requires --mac-sign-identity")
+        has_keychain_profile = bool(cfg.mac_notary_keychain_profile)
+        has_direct_credentials = all([cfg.mac_notary_apple_id, cfg.mac_notary_team_id, cfg.mac_notary_password])
+        if not has_keychain_profile and not has_direct_credentials:
+            raise ConfigError(
+                "--mac-notarize requires either --mac-notary-keychain-profile or all of "
+                "--mac-notary-apple-id, --mac-notary-team-id, and --mac-notary-password"
+            )
+
     # Output — resolve to absolute
-    output = cfg.output if os.path.isabs(cfg.output) else os.path.join(os.getcwd(), cfg.output)
+    output = _normalise_output_path(cfg.output)
 
     # App name default
     app_name = cfg.app_name or os.path.basename(output)
@@ -126,7 +152,7 @@ def validate_and_normalise(cfg: Config) -> Config:
         cfg,
         source=source,
         target_os=target_os,
-        arch=arch,
+        arch=cfg.arch,
         target_type=target_type,
         output=output,
         app_name=app_name,
