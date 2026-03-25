@@ -460,7 +460,6 @@ jobs:
           }
 
           rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount" "$dmg_extract" "$app_dmg_extract"
-          assess_gatekeeper_open "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip"
           unzip -q "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip" -d "$zip_extract"
           verify_signed_binary "$zip_extract/$package_root/$APP_EXECUTABLE"
           run_demo "$zip_extract/$package_root/$APP_EXECUTABLE"
