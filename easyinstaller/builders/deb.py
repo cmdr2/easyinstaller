@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+from pathlib import PurePosixPath
 
 from ..config import Config
 from .common import _deb_arch, _require, _run, _sanitise_name, log
@@ -39,7 +40,7 @@ def build_deb(cfg: Config) -> str:
         if cfg.app_exec:
             usr_bin = os.path.join(deb_root, "usr", "bin")
             os.makedirs(usr_bin, exist_ok=True)
-            os.symlink(f"/{install_prefix}/{cfg.app_exec}", os.path.join(usr_bin, cfg.app_exec))
+            os.symlink(f"/{install_prefix}/{cfg.app_exec}", os.path.join(usr_bin, PurePosixPath(cfg.app_exec).name))
 
         _run(["dpkg-deb", "--build", "--root-owner-group", deb_root, output_file])
     finally:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from easy_installer.builders import _appimage_arch, _host_arch, build_appimage
+from easyinstaller.builders import _appimage_arch, _host_arch, build_appimage
 
 from tests.conftest import base_cfg
 
@@ -26,17 +26,17 @@ class TestBuildAppImage:
             captured["desktop"] = (appdir / f"TestApp.desktop").read_text()
             captured["arch"] = kwargs["env"]["ARCH"]
 
-        patch_run("easy_installer.builders.appimage", side_effect=inspect_appdir)
-        monkeypatch.setattr("easy_installer.builders.appimage.shutil.which", lambda command: "/mock/appimagetool")
+        patch_run("easyinstaller.builders.appimage", side_effect=inspect_appdir)
+        monkeypatch.setattr("easyinstaller.builders.appimage.shutil.which", lambda command: "/mock/appimagetool")
 
         real_isfile = os.path.isfile
         real_access = os.access
         monkeypatch.setattr(
-            "easy_installer.builders.appimage.os.path.isfile",
+            "easyinstaller.builders.appimage.os.path.isfile",
             lambda path: True if path == "/mock/appimagetool" else real_isfile(path),
         )
         monkeypatch.setattr(
-            "easy_installer.builders.appimage.os.access",
+            "easyinstaller.builders.appimage.os.access",
             lambda path, mode: True if path == "/mock/appimagetool" else real_access(path, mode),
         )
 

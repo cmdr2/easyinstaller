@@ -11,10 +11,14 @@ requires-python = ">=3.8"
 license = {text = "MIT"}
 
 [project.scripts]
-easyinstaller = "easy_installer.cli:main"
+easyinstaller = "easyinstaller.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["easyinstaller*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "tests_integration"]
+markers = [
+	"integration: tests that build real artifacts and may require host-specific tooling",
+]

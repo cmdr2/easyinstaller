@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Optional
 
 # ── Supported values ─────────────────────────────────────────────────────────
@@ -80,6 +80,23 @@ class ConfigError(Exception):
     """Raised when configuration is invalid."""
 
 
+def _validate_app_exec(source: str, app_exec: Optional[str]) -> None:
+    if app_exec is None:
+        return
+
+    normalised_exec = app_exec.replace("\\", "/")
+    exec_path = PurePosixPath(normalised_exec)
+    if exec_path.is_absolute() or PureWindowsPath(app_exec).is_absolute():
+        raise ConfigError("--app-exec must be a relative path inside the source directory")
+
+    if any(part in {"", ".", ".."} for part in exec_path.parts):
+        raise ConfigError("--app-exec must stay inside the source directory")
+
+    source_exec = os.path.join(source, *exec_path.parts)
+    if not os.path.isfile(source_exec):
+        raise ConfigError(f"--app-exec does not exist in the source directory: {app_exec}")
+
+
 def _normalise_output_path(output: str) -> str:
     output_path = Path(output).expanduser()
     if not output_path.is_absolute():
@@ -129,6 +146,8 @@ def validate_and_normalise(cfg: Config) -> Config:
     if cfg.arch not in SUPPORTED_ARCH:
         raise ConfigError(f"Unsupported arch: {cfg.arch}. " f"Use one of: {', '.join(SUPPORTED_ARCH)}")
 
+    _validate_app_exec(source, cfg.app_exec)
+
     if cfg.mac_notarize:
         if target_os != "mac":
             raise ConfigError("--mac-notarize is only supported for mac targets")
@@ -148,6 +167,8 @@ def validate_and_normalise(cfg: Config) -> Config:
     # App name default
     app_name = cfg.app_name or os.path.basename(output)
 
+    app_exec = cfg.app_exec.replace("\\", "/") if cfg.app_exec else None
+
     return dataclasses.replace(
         cfg,
         source=source,
@@ -156,4 +177,5 @@ def validate_and_normalise(cfg: Config) -> Config:
         target_type=target_type,
         output=output,
         app_name=app_name,
+        app_exec=app_exec,
     )

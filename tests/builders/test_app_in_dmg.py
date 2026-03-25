@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from easy_installer.builders import build_app_in_dmg
+from easyinstaller.builders import build_app_in_dmg
 
 from tests.conftest import base_cfg
 
@@ -15,7 +15,7 @@ class TestBuildAppInDmg:
 
     def test_builds_dmg_and_staples_when_notarized(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
-        patch_run("easy_installer.builders.mac_support")
+        patch_run("easyinstaller.builders.mac_support")
 
         cfg = base_cfg(
             source_dir,

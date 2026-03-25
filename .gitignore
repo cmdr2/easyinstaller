@@ -6,3 +6,7 @@ build/
 .eggs/
 *.egg
 .pytest_cache/
+.venv
+.venv_linux
+.vscode
+

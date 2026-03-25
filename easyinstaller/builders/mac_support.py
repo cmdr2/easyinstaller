@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+import plistlib
 import shutil
 import stat
 import tempfile
+from pathlib import PurePosixPath
 
 from ..config import Config
 from .common import _require, _run
@@ -98,6 +100,7 @@ def _create_app_bundle(cfg: Config, source_dir: str, output_file: str) -> str:
 
     staging = tempfile.mkdtemp(prefix="easyinstaller-app-")
     try:
+        launcher_name = PurePosixPath(cfg.app_exec).name
         app_root = os.path.join(staging, os.path.basename(output_file))
         contents = os.path.join(app_root, "Contents")
         macos = os.path.join(contents, "MacOS")
@@ -107,7 +110,7 @@ def _create_app_bundle(cfg: Config, source_dir: str, output_file: str) -> str:
 
         shutil.copytree(source_dir, resources, dirs_exist_ok=True)
 
-        launcher = os.path.join(macos, cfg.app_exec)
+        launcher = os.path.join(macos, launcher_name)
         with open(launcher, "w") as handle:
             handle.write(
                 "#!/bin/bash\n"
@@ -116,33 +119,18 @@ def _create_app_bundle(cfg: Config, source_dir: str, output_file: str) -> str:
             )
         os.chmod(launcher, 0o755)
 
-        icon_entry = ""
+        plist_data = {
+            "CFBundleExecutable": launcher_name,
+            "CFBundleIdentifier": _bundle_identifier(cfg.app_name),
+            "CFBundleName": cfg.app_name,
+            "CFBundleVersion": cfg.app_version,
+            "CFBundleShortVersionString": cfg.app_version,
+            "CFBundlePackageType": "APPL",
+        }
         if cfg.app_icon and os.path.isfile(cfg.app_icon):
-            icon_name = os.path.basename(cfg.app_icon)
-            icon_entry = "    <key>CFBundleIconFile</key>\n" f"    <string>{icon_name}</string>\n"
-        with open(os.path.join(contents, "Info.plist"), "w") as handle:
-            handle.write(
-                '<?xml version="1.0" encoding="UTF-8"?>\n'
-                '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
-                ' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
-                '<plist version="1.0">\n'
-                "<dict>\n"
-                "    <key>CFBundleExecutable</key>\n"
-                f"    <string>{cfg.app_exec}</string>\n"
-                "    <key>CFBundleIdentifier</key>\n"
-                f"    <string>{_bundle_identifier(cfg.app_name)}</string>\n"
-                "    <key>CFBundleName</key>\n"
-                f"    <string>{cfg.app_name}</string>\n"
-                "    <key>CFBundleVersion</key>\n"
-                f"    <string>{cfg.app_version}</string>\n"
-                "    <key>CFBundleShortVersionString</key>\n"
-                f"    <string>{cfg.app_version}</string>\n"
-                "    <key>CFBundlePackageType</key>\n"
-                "    <string>APPL</string>\n"
-                f"{icon_entry}"
-                "</dict>\n"
-                "</plist>\n"
-            )
+            plist_data["CFBundleIconFile"] = os.path.basename(cfg.app_icon)
+        with open(os.path.join(contents, "Info.plist"), "wb") as handle:
+            plistlib.dump(plist_data, handle)
 
         if cfg.app_icon and os.path.isfile(cfg.app_icon):
             shutil.copy2(cfg.app_icon, os.path.join(resources, os.path.basename(cfg.app_icon)))

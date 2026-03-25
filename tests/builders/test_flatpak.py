@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from easy_installer.builders import _flatpak_arch, build_flatpak
+from easyinstaller.builders import _flatpak_arch, build_flatpak
 
 from tests.conftest import base_cfg
 
@@ -24,8 +24,8 @@ class TestBuildFlatpak:
                 manifest_path = Path(args[-1])
                 captured["manifest"] = manifest_path.read_text()
 
-        patch_run("easy_installer.builders.flatpak", side_effect=inspect_manifest)
-        patch_subprocess("easy_installer.builders.flatpak")
+        patch_run("easyinstaller.builders.flatpak", side_effect=inspect_manifest)
+        patch_subprocess("easyinstaller.builders.flatpak")
 
         cfg = base_cfg(
             source_dir,
@@ -40,7 +40,12 @@ class TestBuildFlatpak:
         assert result.endswith(".flatpak")
         assert '"command": "myapp"' in captured["manifest"]
         assert any(call["kind"] == "subprocess" and call["args"][0] == "flatpak" for call in calls)
-        assert any(call["kind"] == "run" and call["args"][:4] == ["flatpak-builder", "--user", "--force-clean", "--arch"] and call["args"][4] == "aarch64" for call in calls)
+        assert any(
+            call["kind"] == "run"
+            and call["args"][:4] == ["flatpak-builder", "--user", "--force-clean", "--arch"]
+            and call["args"][4] == "aarch64"
+            for call in calls
+        )
 
 
 class TestFlatpakMappings:

@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import os
 
-from easy_installer.builders import build
+import pytest
+
+from easyinstaller.builders import build
 
 from .conftest import base_cfg
+
+
+pytestmark = pytest.mark.integration
 
 
 class TestDispatcher:

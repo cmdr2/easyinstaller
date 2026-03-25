@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from easy_installer.config import Config, validate_and_normalise
+from easyinstaller.config import Config, validate_and_normalise
 
 
 @pytest.fixture()

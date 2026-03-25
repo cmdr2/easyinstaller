@@ -3,9 +3,14 @@ from __future__ import annotations
 import os
 import tarfile
 
-from easy_installer.builders import build_tar_gz
+import pytest
+
+from easyinstaller.builders import build_tar_gz
 
 from tests.conftest import base_cfg
+
+
+pytestmark = pytest.mark.integration
 
 
 class TestBuildTarGz:

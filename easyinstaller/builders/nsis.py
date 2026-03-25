@@ -9,10 +9,24 @@ from ..config import Config
 from .common import _require, _run, log
 
 
+def _escape_nsis_string(value: str) -> str:
+    return value.replace("$", "$$").replace('"', '$\\"').replace("\r", " ").replace("\n", " ")
+
+
+def _normalise_nsis_component(value: str) -> str:
+    normalised = value.replace("\\", "-").replace("/", "-").replace('"', "'")
+    normalised = " ".join(normalised.split())
+    return normalised or "Application"
+
+
 def build_nsis(cfg: Config) -> str:
     _require("makensis")
     output_file = cfg.output + ".exe"
     log.info("Creating NSIS installer: %s", output_file)
+
+    display_name = _escape_nsis_string(cfg.app_name)
+    install_name = _escape_nsis_string(_normalise_nsis_component(cfg.app_name))
+    display_version = _escape_nsis_string(cfg.app_version)
 
     install_lines: list[str] = []
     uninstall_lines: list[str] = []
@@ -35,8 +49,9 @@ def build_nsis(cfg: Config) -> str:
         uninstall_lines.append(f'  RMDir "$INSTDIR\\{subdir}"')
 
     nsi = _NSIS_TEMPLATE.format(
-        app_name=cfg.app_name,
-        app_version=cfg.app_version,
+        app_name=display_name,
+        install_name=install_name,
+        app_version=display_version,
         output_file=output_file,
         install_files="\n".join(install_lines),
         uninstall_files="\n".join(uninstall_lines),
@@ -58,7 +73,7 @@ _NSIS_TEMPLATE = r"""!include "MUI2.nsh"
 
 Name "{app_name}"
 OutFile "{output_file}"
-InstallDir "$PROGRAMFILES\{app_name}"
+InstallDir "$PROGRAMFILES\{install_name}"
 RequestExecutionLevel admin
 
 !insertmacro MUI_PAGE_DIRECTORY
@@ -71,19 +86,19 @@ RequestExecutionLevel admin
 Section "Install"
 {install_files}
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  CreateDirectory "$SMPROGRAMS\{app_name}"
-  CreateShortcut "$SMPROGRAMS\{app_name}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{app_name}" "DisplayName" "{app_name}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{app_name}" "UninstallString" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{app_name}" "DisplayVersion" "{app_version}"
+    CreateDirectory "$SMPROGRAMS\{install_name}"
+    CreateShortcut "$SMPROGRAMS\{install_name}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "DisplayName" "{app_name}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "UninstallString" "$INSTDIR\Uninstall.exe"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "DisplayVersion" "{app_version}"
 SectionEnd
 
 Section "Uninstall"
 {uninstall_files}
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
-  Delete "$SMPROGRAMS\{app_name}\Uninstall.lnk"
-  RMDir "$SMPROGRAMS\{app_name}"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{app_name}"
+    Delete "$SMPROGRAMS\{install_name}\Uninstall.lnk"
+    RMDir "$SMPROGRAMS\{install_name}"
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}"
 SectionEnd
 """

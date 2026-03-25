@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from easy_installer.builders import build_rpm
+from easyinstaller.builders import build_rpm
 
 from tests.conftest import base_cfg
 
@@ -21,7 +21,7 @@ class TestBuildRpm:
             built_dir.mkdir(parents=True, exist_ok=True)
             (built_dir / "my-spaced-app.rpm").write_text("fake rpm")
 
-        patch_run("easy_installer.builders.rpm", side_effect=fake_rpmbuild)
+        patch_run("easyinstaller.builders.rpm", side_effect=fake_rpmbuild)
 
         cfg = base_cfg(source_dir, output_path, target_type="rpm", app_name="My Spaced App", app_version="1.0.0")
         result = build_rpm(cfg)

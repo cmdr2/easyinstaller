@@ -62,7 +62,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     optional.add_argument("--app-maintainer", default="maintainer@example.com", help="Maintainer email")
     optional.add_argument("--app-category", default="Utility", help="Application category")
-    optional.add_argument("--app-exec", default=None, help="Main executable name (relative to source dir)")
+    optional.add_argument("--app-exec", default=None, help="Main executable path relative to the source dir")
     optional.add_argument("--app-icon", default=None, help="Path to application icon")
 
     mac = parser.add_argument_group("mac notarization")

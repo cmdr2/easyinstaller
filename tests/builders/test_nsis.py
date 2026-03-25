@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 
-from easy_installer.builders import build_nsis
+from easyinstaller.builders import build_nsis
 
 from tests.conftest import base_cfg
 
@@ -17,7 +17,7 @@ class TestBuildNsis:
             script_path = pathlib.Path(args[1])
             captured["script"] = script_path.read_text()
 
-        patch_run("easy_installer.builders.nsis", side_effect=inspect_script)
+        patch_run("easyinstaller.builders.nsis", side_effect=inspect_script)
 
         src = tmp_path / "src"
         src.mkdir()
@@ -43,7 +43,7 @@ class TestBuildNsis:
         def inspect_script(args, _kwargs):
             captured["script"] = pathlib.Path(args[1]).read_text()
 
-        patch_run("easy_installer.builders.nsis", side_effect=inspect_script)
+        patch_run("easyinstaller.builders.nsis", side_effect=inspect_script)
 
         src = tmp_path / "src"
         src.mkdir()
@@ -55,3 +55,37 @@ class TestBuildNsis:
         build_nsis(cfg)
 
         assert 'Delete "$INSTDIR\\sub\\deep\\inner.txt"' in captured["script"]
+
+    def test_escapes_display_name_and_sanitises_install_paths(self, tmp_path, command_spy):
+        _calls, patch_run, _patch_subprocess = command_spy
+        captured = {}
+
+        def inspect_script(args, _kwargs):
+            captured["script"] = pathlib.Path(args[1]).read_text()
+
+        patch_run("easyinstaller.builders.nsis", side_effect=inspect_script)
+
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "app.exe").write_text("binary")
+
+        cfg = base_cfg(
+            str(src),
+            str(tmp_path / "setup"),
+            target_os="windows",
+            target_type="nsis",
+            app_name='My "Quoted" App\\Suite',
+            app_version='1.0"beta',
+        )
+        build_nsis(cfg)
+
+        assert 'Name "My $\\"Quoted$\\" App\\Suite"' in captured["script"]
+        assert "InstallDir \"$PROGRAMFILES\\My 'Quoted' App-Suite\"" in captured["script"]
+        assert (
+            'WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\My \'Quoted\' App-Suite" "DisplayName" "My $\\"Quoted$\\" App\\Suite"'
+            in captured["script"]
+        )
+        assert (
+            'WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\My \'Quoted\' App-Suite" "DisplayVersion" "1.0$\\"beta"'
+            in captured["script"]
+        )

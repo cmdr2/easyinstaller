@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from easy_installer.builders import build_dmg
+from easyinstaller.builders import build_dmg
 
 from tests.conftest import base_cfg
 
@@ -8,7 +8,7 @@ from tests.conftest import base_cfg
 class TestBuildDmg:
     def test_uses_shared_dmg_creation_helper(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
-        patch_run("easy_installer.builders.mac_support")
+        patch_run("easyinstaller.builders.mac_support")
 
         cfg = base_cfg(source_dir, output_path, target_os="mac", target_type="dmg", arch="arm64")
         result = build_dmg(cfg)
@@ -18,7 +18,7 @@ class TestBuildDmg:
 
     def test_staples_when_notarized(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
-        patch_run("easy_installer.builders.mac_support")
+        patch_run("easyinstaller.builders.mac_support")
 
         cfg = base_cfg(
             source_dir,

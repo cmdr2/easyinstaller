@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from easy_installer.config import ConfigError
+from easyinstaller.config import ConfigError
 
 from .conftest import base_cfg
 
@@ -97,3 +97,20 @@ class TestValidation:
     def test_output_folder_path_uses_last_segment_as_filename(self, source_dir, tmp_path):
         cfg = base_cfg(source_dir, str(tmp_path / "artifacts" / "release") + os.sep)
         assert cfg.output.endswith(os.path.join("artifacts", "release", "release"))
+
+    def test_app_exec_allows_relative_subpath(self, output_path, tmp_path):
+        source = tmp_path / "source"
+        nested = source / "bin"
+        nested.mkdir(parents=True)
+        (nested / "myapp").write_text("#!/bin/bash\nexit 0\n")
+
+        cfg = base_cfg(str(source), output_path, app_exec="bin/myapp")
+        assert cfg.app_exec == "bin/myapp"
+
+    def test_app_exec_must_not_escape_source_directory(self, source_dir, output_path):
+        with pytest.raises(ConfigError, match="must stay inside the source directory"):
+            base_cfg(source_dir, output_path, app_exec="../myapp")
+
+    def test_app_exec_must_exist_in_source_directory(self, source_dir, output_path):
+        with pytest.raises(ConfigError, match="does not exist"):
+            base_cfg(source_dir, output_path, app_exec="missing")

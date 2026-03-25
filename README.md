@@ -43,7 +43,7 @@ easyinstaller --source <dir> --os <os> --arch <arch> --type <type> --output <nam
 | `--app-description` | `Application packaged with easyinstaller` | deb, rpm, snap                 |
 | `--app-maintainer`  | `maintainer@example.com`               | deb                                |
 | `--app-category`    | `Utility`                              | deb, appimage                      |
-| `--app-exec`        | *(none)*                               | appimage, flatpak, snap, app, app-in-dmg (**required**) |
+| `--app-exec`        | *(none)*                               | appimage, flatpak, snap, app, app-in-dmg (**required**; must stay within the source tree) |
 | `--app-icon`        | *(none)*                               | appimage, app                      |
 
 ### Mac notarization options
@@ -131,8 +131,10 @@ Other formats require the corresponding tool to be installed on the build machin
 
 ```bash
 pip install pytest
-python -m pytest tests/ -v
+python -m pytest tests/ tests_integration/ -v
 ```
+
+The integration suite under `tests_integration/` builds real artifacts. Tests that depend on platform-specific tooling skip automatically when they are run on the wrong host OS or when the required tool is unavailable.
 
 ## License
 
