@@ -8,8 +8,8 @@ permissions:
   contents: write
 
 env:
-  APP_NAME: HelloEasyInstaller
-  APP_EXECUTABLE: hello_easyinstaller
+  APP_NAME: DemoEasyInstaller
+  APP_EXECUTABLE: demo_easyinstaller
 
 jobs:
   build-windows:
@@ -56,7 +56,7 @@ jobs:
         run: |
           mkdir -p "$OUTPUT_DIR"
           version="${GITHUB_REF_NAME#v}"
-          archive_base="$OUTPUT_DIR/hello-easyinstaller-windows-x64"
+          archive_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64-setup"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
@@ -114,7 +114,7 @@ jobs:
         run: |
           mkdir -p "$OUTPUT_DIR"
           version="${GITHUB_REF_NAME#v}"
-          base="$OUTPUT_DIR/hello-easyinstaller-linux-x64"
+          base="$OUTPUT_DIR/demo-easyinstaller-linux-x64"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$base"
@@ -192,9 +192,9 @@ jobs:
         run: |
           mkdir -p "$OUTPUT_DIR"
           version="${GITHUB_REF_NAME#v}"
-          archive_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64"
-          dmg_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64-files"
-          app_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64-app"
+          archive_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
+          dmg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files"
+          app_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
           notarize_args=()
 
           if [[ "${{ steps.check-signing.outputs.enabled }}" == "true" ]]; then
@@ -210,7 +210,6 @@ jobs:
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type dmg --output "$dmg_base" --app-name "$APP_NAME" "${notarize_args[@]}"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app --output "$app_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-dmg --output "$app_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
 
       - name: Upload macOS release assets
