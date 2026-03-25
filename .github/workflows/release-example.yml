@@ -154,7 +154,7 @@ jobs:
           python -m pip install .
 
       - name: Import signing certificate
-        if: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_SIGN_IDENTITY != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}
+        if: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 && secrets.MAC_CERTIFICATE_PASSWORD && secrets.MAC_SIGN_IDENTITY && secrets.MAC_NOTARY_APPLE_ID && secrets.MAC_NOTARY_TEAM_ID && secrets.MAC_NOTARY_PASSWORD }}
         shell: bash
         env:
           MAC_CERTIFICATE_P12_BASE64: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
