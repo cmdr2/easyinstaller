@@ -24,7 +24,7 @@ def require_host_os(expected: str) -> None:
 def require_commands(*commands: str) -> None:
     missing = [command for command in commands if shutil.which(command) is None]
     if missing:
-        pytest.skip(f"missing required commands: {', '.join(missing)}")
+        pytest.fail(f"missing required commands: {', '.join(missing)}")
 
 
 def run_command(args: list[str]) -> subprocess.CompletedProcess[str]:

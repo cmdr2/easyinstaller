@@ -90,4 +90,4 @@ pip install pytest
 python -m pytest tests/ tests_integration/ -v
 ```
 
-The integration suite under `tests_integration/` builds real artifacts. Tests that depend on platform-specific tooling skip automatically when they are run on the wrong host OS or when the required tool is unavailable.
+The integration suite under `tests_integration/` builds real artifacts. Tests that require a specific host OS skip automatically on the wrong host, and tests fail fast when their required external tools are missing on the correct host OS.
