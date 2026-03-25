@@ -153,8 +153,14 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install .
 
+      - name: Check signing secrets
+        id: check-signing
+        shell: bash
+        run: |
+          echo "enabled=${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_SIGN_IDENTITY != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}" >> "$GITHUB_OUTPUT"
+
       - name: Import signing certificate
-        if: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 && secrets.MAC_CERTIFICATE_PASSWORD && secrets.MAC_SIGN_IDENTITY && secrets.MAC_NOTARY_APPLE_ID && secrets.MAC_NOTARY_TEAM_ID && secrets.MAC_NOTARY_PASSWORD }}
+        if: steps.check-signing.outputs.enabled == 'true'
         shell: bash
         env:
           MAC_CERTIFICATE_P12_BASE64: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
@@ -182,11 +188,6 @@ jobs:
 
       - name: Package macOS artifacts
         shell: bash
-        env:
-          MAC_SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
-          MAC_NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
-          MAC_NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
-          MAC_NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
         run: |
           mkdir -p "$OUTPUT_DIR"
           version="${GITHUB_REF_NAME#v}"
@@ -195,13 +196,13 @@ jobs:
           app_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64-app"
           notarize_args=()
 
-          if [[ -n "${MAC_SIGN_IDENTITY:-}" && -n "${MAC_NOTARY_APPLE_ID:-}" && -n "${MAC_NOTARY_TEAM_ID:-}" && -n "${MAC_NOTARY_PASSWORD:-}" ]]; then
+          if [[ "${{ steps.check-signing.outputs.enabled }}" == "true" ]]; then
             notarize_args=(
               --mac-notarize
-              --mac-sign-identity "$MAC_SIGN_IDENTITY"
-              --mac-notary-apple-id "$MAC_NOTARY_APPLE_ID"
-              --mac-notary-team-id "$MAC_NOTARY_TEAM_ID"
-              --mac-notary-password "$MAC_NOTARY_PASSWORD"
+              --mac-sign-identity "${{ secrets.MAC_SIGN_IDENTITY }}"
+              --mac-notary-apple-id "${{ secrets.MAC_NOTARY_APPLE_ID }}"
+              --mac-notary-team-id "${{ secrets.MAC_NOTARY_TEAM_ID }}"
+              --mac-notary-password "${{ secrets.MAC_NOTARY_PASSWORD }}"
             )
           fi
 
