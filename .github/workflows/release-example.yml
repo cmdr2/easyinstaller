@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 env:
-  APP_NAME: Hello easyinstaller
+  APP_NAME: HelloEasyInstaller
   APP_EXECUTABLE: hello_easyinstaller
 
 jobs:
