@@ -30,7 +30,8 @@ Run: `easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz --ou
 
 ## appimage
 
-Run: `easyinstaller --source ./build --os linux --arch x86_64 --type appimage --output myapp --app-name "My App" --app-version 1.0.0 --app-exec myapp`.
+1. Install `appimagetool` and ensure it is available on `PATH`. You can download the release artifact from https://github.com/AppImage/appimagetool/releases and make it executable.
+2. Run: `easyinstaller --source ./build --os linux --arch x86_64 --type appimage --output myapp --app-name "My App" --app-version 1.0.0 --app-exec myapp`.
 
 `myapp.AppImage` will be written in the current directory.
 

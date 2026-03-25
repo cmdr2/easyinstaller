@@ -9,7 +9,7 @@ from ..config import Config
 from .app import build_app
 from .app_in_dmg import build_app_in_dmg
 from .appimage import build_appimage
-from .common import _appimage_arch, _flatpak_arch, _host_arch, _sanitise_name
+from .common import _appimage_arch, _flatpak_arch, _sanitise_name
 from .deb import build_deb
 from .dmg import build_dmg
 from .flatpak import build_flatpak
@@ -52,7 +52,6 @@ __all__ = [
     "_NSIS_TEMPLATE",
     "_appimage_arch",
     "_flatpak_arch",
-    "_host_arch",
     "_sanitise_name",
     "build",
     "build_app",

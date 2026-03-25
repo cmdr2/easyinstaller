@@ -80,7 +80,7 @@ Other formats require the corresponding tool to be installed on the build machin
 | `nsis`     | [makensis](https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download) |
 | `deb`      | `dpkg-deb`        |
 | `rpm`      | `rpmbuild`        |
-| `appimage` | `appimagetool` (auto-downloaded if missing) |
+| `appimage` | `appimagetool`    |
 | `flatpak`  | `flatpak`, `flatpak-builder` |
 | `snap`     | `snapcraft`       |
 | `dmg`      | `hdiutil` (macOS) |

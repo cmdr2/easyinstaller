@@ -154,6 +154,10 @@ jobs:
           sudo systemctl start snapd.socket
           sudo snap install snapcraft --classic
           sudo snap install core22
+          appimagetool="$RUNNER_TEMP/appimagetool"
+          curl -L "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -o "$appimagetool"
+          chmod +x "$appimagetool"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
       - name: Install easyinstaller
         shell: bash

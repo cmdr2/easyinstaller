@@ -6,10 +6,9 @@ import os
 import shutil
 import subprocess
 import tempfile
-import urllib.request
 
 from ..config import Config
-from .common import _appimage_arch, _host_arch, _run, log
+from .common import _appimage_arch, _require, _run, log
 
 
 def build_appimage(cfg: Config) -> str:
@@ -50,8 +49,7 @@ def build_appimage(cfg: Config) -> str:
             import base64
 
             pixel = base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
-                "2mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4" "2mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
             )
             for path in (
                 os.path.join(appdir, f"{cfg.app_name}.png"),
@@ -72,16 +70,7 @@ def build_appimage(cfg: Config) -> str:
             )
         os.chmod(apprun, 0o755)
 
-        appimagetool = shutil.which("appimagetool") or "/tmp/appimagetool"
-        if not os.path.isfile(appimagetool) or not os.access(appimagetool, os.X_OK):
-            host_arch = _host_arch()
-            url = (
-                "https://github.com/AppImage/appimagetool/releases/"
-                f"download/continuous/appimagetool-{host_arch}.AppImage"
-            )
-            log.info("Downloading appimagetool from %s", url)
-            urllib.request.urlretrieve(url, appimagetool)
-            os.chmod(appimagetool, 0o755)
+        appimagetool = _require("appimagetool")
 
         env = {**os.environ, "ARCH": _appimage_arch(cfg.arch)}
         try:
