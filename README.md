@@ -1,4 +1,4 @@
-# easy-installer
+# easyinstaller
 
 Create installers and archives from a release folder for any target OS.
 
@@ -21,7 +21,7 @@ pip install .
 ## Usage
 
 ```
-easy-installer --source <dir> --os <os> --arch <arch> --type <type> --output <name> [options]
+easyinstaller --source <dir> --os <os> --arch <arch> --type <type> --output <name> [options]
 ```
 
 ### Required arguments
@@ -40,7 +40,7 @@ easy-installer --source <dir> --os <os> --arch <arch> --type <type> --output <na
 |---------------------|----------------------------------------|------------------------------------|
 | `--app-name`        | basename of `--output`                 | deb, rpm, nsis, appimage, flatpak, snap, dmg, app |
 | `--app-version`     | `1.0.0`                                | all installer types                |
-| `--app-description` | `Application packaged with easy-installer` | deb, rpm, snap                 |
+| `--app-description` | `Application packaged with easyinstaller` | deb, rpm, snap                 |
 | `--app-maintainer`  | `maintainer@example.com`               | deb                                |
 | `--app-category`    | `Utility`                              | deb, appimage                      |
 | `--app-exec`        | *(none)*                               | appimage, flatpak, snap, app (**required**) |
@@ -50,21 +50,21 @@ easy-installer --source <dir> --os <os> --arch <arch> --type <type> --output <na
 
 ```bash
 # Create a .tar.gz for Linux
-easy-installer --source ./build --os linux --arch x86_64 --type tar.gz \
+easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz \
     --output myapp-1.0.0-linux-x64
 
 # Create a .deb package
-easy-installer --source ./build --os linux --arch x86_64 --type deb \
+easyinstaller --source ./build --os linux --arch x86_64 --type deb \
     --output myapp \
     --app-name "My App" --app-version 1.0.0 --app-exec myapp
 
 # Create a macOS .app bundle
-easy-installer --source ./build --os mac --arch arm64 --type app \
+easyinstaller --source ./build --os mac --arch arm64 --type app \
     --output MyApp \
     --app-name "My App" --app-exec myapp
 
 # Create a Windows NSIS installer (requires makensis)
-easy-installer --source ./build --os windows --arch x86_64 --type nsis \
+easyinstaller --source ./build --os windows --arch x86_64 --type nsis \
     --output myapp-setup \
     --app-name "My App" --app-version 1.0.0
 ```

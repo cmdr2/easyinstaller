@@ -1,4 +1,4 @@
-"""Tests for easy-installer."""
+"""Tests for easyinstaller."""
 
 from __future__ import annotations
 
@@ -13,13 +13,22 @@ import pytest
 
 from easy_installer.config import Config, ConfigError, validate_and_normalise
 from easy_installer.builders import (
-    build_zip, build_tar_gz, build_app, build_deb, build_rpm, build,
-    _appimage_arch, _flatpak_arch, _host_arch, _sanitise_name,
+    build_zip,
+    build_tar_gz,
+    build_app,
+    build_deb,
+    build_rpm,
+    build,
+    _appimage_arch,
+    _flatpak_arch,
+    _host_arch,
+    _sanitise_name,
 )
 from easy_installer.cli import main
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture()
 def source_dir(tmp_path):
@@ -55,6 +64,7 @@ def _base_cfg(source_dir: str, output: str, **overrides) -> Config:
 
 
 # ── Config / validation tests ────────────────────────────────────────────────
+
 
 class TestValidation:
     def test_valid_config(self, source_dir, output_path):
@@ -109,6 +119,7 @@ class TestValidation:
 
 # ── Builder tests: zip ───────────────────────────────────────────────────────
 
+
 class TestBuildZip:
     def test_creates_zip(self, source_dir, output_path):
         cfg = _base_cfg(source_dir, output_path, target_type="zip")
@@ -141,6 +152,7 @@ class TestBuildZip:
 
 
 # ── Builder tests: tar.gz ────────────────────────────────────────────────────
+
 
 class TestBuildTarGz:
     def test_creates_tar_gz(self, source_dir, output_path):
@@ -175,6 +187,7 @@ class TestBuildTarGz:
 
 # ── Builder tests: .app ─────────────────────────────────────────────────────
 
+
 class TestBuildApp:
     def test_creates_app_bundle(self, source_dir, output_path):
         cfg = _base_cfg(source_dir, output_path, target_os="mac", target_type="app", app_exec="myapp")
@@ -191,9 +204,13 @@ class TestBuildApp:
 
     def test_info_plist_content(self, source_dir, output_path):
         cfg = _base_cfg(
-            source_dir, output_path,
-            target_os="mac", target_type="app",
-            app_exec="myapp", app_name="TestApp", app_version="1.2.3",
+            source_dir,
+            output_path,
+            target_os="mac",
+            target_type="app",
+            app_exec="myapp",
+            app_name="TestApp",
+            app_version="1.2.3",
         )
         result = build_app(cfg)
         with open(os.path.join(result, "Contents", "Info.plist")) as f:
@@ -216,12 +233,17 @@ class TestBuildApp:
 
 # ── Builder tests: deb ───────────────────────────────────────────────────────
 
+
 @pytest.mark.skipif(shutil.which("dpkg-deb") is None, reason="dpkg-deb not available")
 class TestBuildDeb:
     def test_creates_deb(self, source_dir, output_path):
         cfg = _base_cfg(
-            source_dir, output_path, target_type="deb",
-            app_name="TestApp", app_version="2.0.0", app_exec="myapp",
+            source_dir,
+            output_path,
+            target_type="deb",
+            app_name="TestApp",
+            app_version="2.0.0",
+            app_exec="myapp",
         )
         result = build_deb(cfg)
         assert result.endswith(".deb")
@@ -229,9 +251,14 @@ class TestBuildDeb:
 
     def test_deb_metadata(self, source_dir, output_path):
         import subprocess
+
         cfg = _base_cfg(
-            source_dir, output_path, target_type="deb",
-            app_name="TestApp", app_version="2.0.0", app_exec="myapp",
+            source_dir,
+            output_path,
+            target_type="deb",
+            app_name="TestApp",
+            app_version="2.0.0",
+            app_exec="myapp",
             app_maintainer="test@test.com",
         )
         result = build_deb(cfg)
@@ -242,12 +269,16 @@ class TestBuildDeb:
 
 # ── Builder tests: rpm ───────────────────────────────────────────────────────
 
+
 @pytest.mark.skipif(shutil.which("rpmbuild") is None, reason="rpmbuild not available")
 class TestBuildRpm:
     def test_creates_rpm(self, source_dir, output_path):
         cfg = _base_cfg(
-            source_dir, output_path, target_type="rpm",
-            app_name="TestApp", app_version="1.0.0",
+            source_dir,
+            output_path,
+            target_type="rpm",
+            app_name="TestApp",
+            app_version="1.0.0",
         )
         result = build_rpm(cfg)
         assert result.endswith(".rpm")
@@ -255,6 +286,7 @@ class TestBuildRpm:
 
 
 # ── CLI tests ────────────────────────────────────────────────────────────────
+
 
 class TestCLI:
     def test_help(self, capsys):
@@ -268,31 +300,50 @@ class TestCLI:
         assert exc_info.value.code == 2
 
     def test_invalid_os(self, source_dir):
-        ret = main(["--source", source_dir, "--os", "bsd", "--arch", "x86_64",
-                     "--type", "zip", "--output", "/tmp/test-out"])
+        ret = main(
+            ["--source", source_dir, "--os", "bsd", "--arch", "x86_64", "--type", "zip", "--output", "/tmp/test-out"]
+        )
         assert ret == 1
 
     def test_end_to_end_zip(self, source_dir, output_path):
-        ret = main(["--source", source_dir, "--os", "linux", "--arch", "x86_64",
-                     "--type", "zip", "--output", output_path])
+        ret = main(
+            ["--source", source_dir, "--os", "linux", "--arch", "x86_64", "--type", "zip", "--output", output_path]
+        )
         assert ret == 0
         assert os.path.isfile(output_path + ".zip")
 
     def test_end_to_end_tar_gz(self, source_dir, output_path):
-        ret = main(["--source", source_dir, "--os", "linux", "--arch", "x86_64",
-                     "--type", "tar.gz", "--output", output_path])
+        ret = main(
+            ["--source", source_dir, "--os", "linux", "--arch", "x86_64", "--type", "tar.gz", "--output", output_path]
+        )
         assert ret == 0
         assert os.path.isfile(output_path + ".tar.gz")
 
     def test_end_to_end_app(self, source_dir, output_path):
-        ret = main(["--source", source_dir, "--os", "mac", "--arch", "arm64",
-                     "--type", "app", "--output", output_path,
-                     "--app-name", "TestApp", "--app-exec", "myapp"])
+        ret = main(
+            [
+                "--source",
+                source_dir,
+                "--os",
+                "mac",
+                "--arch",
+                "arm64",
+                "--type",
+                "app",
+                "--output",
+                output_path,
+                "--app-name",
+                "TestApp",
+                "--app-exec",
+                "myapp",
+            ]
+        )
         assert ret == 0
         assert os.path.isdir(output_path + ".app")
 
 
 # ── Bug-fix regression tests ────────────────────────────────────────────────
+
 
 class TestAppImageArchMapping:
     """Bug: ARCH env var passed to appimagetool used our normalised names
@@ -350,8 +401,7 @@ class TestNsisSubdirCleanup:
         from easy_installer.builders import _NSIS_TEMPLATE
         import re
 
-        cfg = _base_cfg(str(src), str(tmp_path / "out"), target_os="windows", target_type="nsis",
-                         app_name="TestApp")
+        cfg = _base_cfg(str(src), str(tmp_path / "out"), target_os="windows", target_type="nsis", app_name="TestApp")
         # Reproduce the script generation logic
         install_lines = []
         uninstall_lines = []
@@ -386,9 +436,9 @@ class TestAppIconInPlist:
         icon = tmp_path / "icon.icns"
         icon.write_text("fake icon data")  # Content doesn't matter; we only test plist reference
 
-        cfg = _base_cfg(str(src), str(tmp_path / "out"),
-                         target_os="mac", target_type="app",
-                         app_exec="myapp", app_icon=str(icon))
+        cfg = _base_cfg(
+            str(src), str(tmp_path / "out"), target_os="mac", target_type="app", app_exec="myapp", app_icon=str(icon)
+        )
         result = build_app(cfg)
         with open(os.path.join(result, "Contents", "Info.plist")) as f:
             plist = f.read()
@@ -396,8 +446,7 @@ class TestAppIconInPlist:
         assert "icon.icns" in plist
 
     def test_plist_omits_icon_when_not_provided(self, source_dir, output_path):
-        cfg = _base_cfg(source_dir, output_path,
-                         target_os="mac", target_type="app", app_exec="myapp")
+        cfg = _base_cfg(source_dir, output_path, target_os="mac", target_type="app", app_exec="myapp")
         result = build_app(cfg)
         with open(os.path.join(result, "Contents", "Info.plist")) as f:
             plist = f.read()
@@ -410,9 +459,14 @@ class TestDebSanitisedInstallPath:
 
     def test_deb_install_path_uses_sanitised_name(self, source_dir, output_path):
         import subprocess
+
         cfg = _base_cfg(
-            source_dir, output_path, target_type="deb",
-            app_name="My Spaced App", app_version="1.0.0", app_exec="myapp",
+            source_dir,
+            output_path,
+            target_type="deb",
+            app_name="My Spaced App",
+            app_version="1.0.0",
+            app_exec="myapp",
         )
         result = build_deb(cfg)
         contents = subprocess.check_output(["dpkg-deb", "--contents", result], text=True)
@@ -427,8 +481,11 @@ class TestRpmSanitisedInstallPath:
 
     def test_rpm_with_spaced_name_succeeds(self, source_dir, output_path):
         cfg = _base_cfg(
-            source_dir, output_path, target_type="rpm",
-            app_name="My Spaced App", app_version="1.0.0",
+            source_dir,
+            output_path,
+            target_type="rpm",
+            app_name="My Spaced App",
+            app_version="1.0.0",
         )
         result = build_rpm(cfg)
         assert result.endswith(".rpm")
@@ -436,6 +493,7 @@ class TestRpmSanitisedInstallPath:
 
 
 # ── Fix regression tests (session 2) ────────────────────────────────────────
+
 
 class TestHostArchMapping:
     """Fix: appimagetool download must use host machine arch, not target arch."""

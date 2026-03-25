@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "easy-installer"
+name = "easyinstaller"
 version = "1.0.0"
 description = "Create installers and archives from a release folder for any target OS."
 readme = "README.md"
@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 license = {text = "MIT"}
 
 [project.scripts]
-easy-installer = "easy_installer.cli:main"
+easyinstaller = "easy_installer.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -16,10 +16,11 @@ import zipfile
 
 from .config import Config
 
-log = logging.getLogger("easy-installer")
+log = logging.getLogger("easyinstaller")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _require(cmd: str) -> str:
     """Return the absolute path of *cmd*, or raise."""
@@ -51,9 +52,13 @@ def _host_arch() -> str:
     """Return the appimagetool arch string for the current host machine."""
     machine = platform.machine().lower()
     mapping = {
-        "x86_64": "x86_64", "amd64": "x86_64",
-        "aarch64": "aarch64", "arm64": "aarch64",
-        "i386": "i686", "i686": "i686", "x86": "i686",
+        "x86_64": "x86_64",
+        "amd64": "x86_64",
+        "aarch64": "aarch64",
+        "arm64": "aarch64",
+        "i386": "i686",
+        "i686": "i686",
+        "x86": "i686",
         "armv7l": "armhf",
     }
     result = mapping.get(machine)
@@ -70,12 +75,14 @@ def _flatpak_arch(arch: str) -> str:
 def _sanitise_name(name: str) -> str:
     """Lower-case, replace non-alphanumeric with hyphens, collapse multiples."""
     import re
+
     s = name.lower()
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-")
 
 
 # ── Archive builders ─────────────────────────────────────────────────────────
+
 
 def build_zip(cfg: Config) -> str:
     output_file = cfg.output + ".zip"
@@ -97,6 +104,7 @@ def build_zip(cfg: Config) -> str:
 
 def build_tar_gz(cfg: Config) -> str:
     import tarfile
+
     output_file = cfg.output + ".tar.gz"
     log.info("Creating tar.gz archive: %s", output_file)
     with tarfile.open(output_file, "w:gz") as tf:
@@ -106,6 +114,7 @@ def build_tar_gz(cfg: Config) -> str:
 
 
 # ── Windows ──────────────────────────────────────────────────────────────────
+
 
 def build_nsis(cfg: Config) -> str:
     _require("makensis")
@@ -142,7 +151,7 @@ def build_nsis(cfg: Config) -> str:
         uninstall_files="\n".join(uninstall_lines),
     )
 
-    fd, nsi_path = tempfile.mkstemp(suffix=".nsi", prefix="easy-installer-")
+    fd, nsi_path = tempfile.mkstemp(suffix=".nsi", prefix="easyinstaller-")
     try:
         with os.fdopen(fd, "w") as f:
             f.write(nsi)
@@ -191,12 +200,13 @@ SectionEnd
 
 # ── Linux: deb ───────────────────────────────────────────────────────────────
 
+
 def build_deb(cfg: Config) -> str:
     _require("dpkg-deb")
     output_file = cfg.output + ".deb"
     log.info("Creating deb package: %s", output_file)
 
-    deb_root = tempfile.mkdtemp(prefix="easy-installer-deb-")
+    deb_root = tempfile.mkdtemp(prefix="easyinstaller-deb-")
     try:
         pkg_name = _sanitise_name(cfg.app_name)
         install_prefix = f"opt/{pkg_name}"
@@ -235,12 +245,13 @@ def build_deb(cfg: Config) -> str:
 
 # ── Linux: rpm ───────────────────────────────────────────────────────────────
 
+
 def build_rpm(cfg: Config) -> str:
     _require("rpmbuild")
     output_file = cfg.output + ".rpm"
     log.info("Creating rpm package: %s", output_file)
 
-    rpm_root = tempfile.mkdtemp(prefix="easy-installer-rpm-")
+    rpm_root = tempfile.mkdtemp(prefix="easyinstaller-rpm-")
     try:
         for d in ("BUILD", "RPMS", "SOURCES", "SPECS", "SRPMS", "BUILDROOT"):
             os.makedirs(os.path.join(rpm_root, d))
@@ -249,11 +260,12 @@ def build_rpm(cfg: Config) -> str:
         install_prefix = f"opt/{sanitised}"
 
         # Create source tarball
-        src_staging = tempfile.mkdtemp(prefix="easy-installer-rpmsrc-")
+        src_staging = tempfile.mkdtemp(prefix="easyinstaller-rpmsrc-")
         try:
             staging_inner = os.path.join(src_staging, f"{sanitised}-{cfg.app_version}")
             shutil.copytree(cfg.source, staging_inner, dirs_exist_ok=True)
             import tarfile
+
             tarball = os.path.join(rpm_root, "SOURCES", f"{sanitised}-{cfg.app_version}.tar.gz")
             with tarfile.open(tarball, "w:gz") as tf:
                 tf.add(staging_inner, arcname=f"{sanitised}-{cfg.app_version}")
@@ -284,12 +296,17 @@ def build_rpm(cfg: Config) -> str:
                 f"/{install_prefix}\n"
             )
 
-        _run([
-            "rpmbuild",
-            "--define", f"_topdir {rpm_root}",
-            "--target", _rpm_arch(cfg.arch),
-            "-bb", spec_path,
-        ])
+        _run(
+            [
+                "rpmbuild",
+                "--define",
+                f"_topdir {rpm_root}",
+                "--target",
+                _rpm_arch(cfg.arch),
+                "-bb",
+                spec_path,
+            ]
+        )
 
         # Find built RPM
         rpms_dir = os.path.join(rpm_root, "RPMS")
@@ -313,6 +330,7 @@ def build_rpm(cfg: Config) -> str:
 
 # ── Linux: AppImage ──────────────────────────────────────────────────────────
 
+
 def build_appimage(cfg: Config) -> str:
     if not cfg.app_exec:
         raise RuntimeError("--app-exec is required for AppImage")
@@ -320,7 +338,7 @@ def build_appimage(cfg: Config) -> str:
     output_file = cfg.output + ".AppImage"
     log.info("Creating AppImage: %s", output_file)
 
-    appdir = tempfile.mkdtemp(prefix="easy-installer-appimage-")
+    appdir = tempfile.mkdtemp(prefix="easyinstaller-appimage-")
     try:
         usr_bin = os.path.join(appdir, "usr", "bin")
         os.makedirs(usr_bin)
@@ -351,9 +369,9 @@ def build_appimage(cfg: Config) -> str:
         else:
             # Minimal valid 1×1 PNG so appimagetool doesn't fail
             import base64
+
             pixel = base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
-                "2mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4" "2mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
             )
             for p in (
                 os.path.join(appdir, f"{cfg.app_name}.png"),
@@ -366,7 +384,7 @@ def build_appimage(cfg: Config) -> str:
         apprun = os.path.join(appdir, "AppRun")
         with open(apprun, "w") as f:
             f.write(
-                '#!/bin/bash\n'
+                "#!/bin/bash\n"
                 'SELF="$(readlink -f "$0")"\n'
                 'HERE="$(dirname "$SELF")"\n'
                 'export PATH="${HERE}/usr/bin:${PATH}"\n'
@@ -385,6 +403,7 @@ def build_appimage(cfg: Config) -> str:
             )
             log.info("Downloading appimagetool from %s", url)
             import urllib.request
+
             urllib.request.urlretrieve(url, appimagetool)
             os.chmod(appimagetool, 0o755)
 
@@ -402,6 +421,7 @@ def build_appimage(cfg: Config) -> str:
 
 # ── Linux: Flatpak ───────────────────────────────────────────────────────────
 
+
 def build_flatpak(cfg: Config) -> str:
     _require("flatpak")
     _require("flatpak-builder")
@@ -413,22 +433,36 @@ def build_flatpak(cfg: Config) -> str:
 
     import json
     import re
+
     sanitised_id = "com." + re.sub(r"[^a-z0-9]", "", cfg.app_name.lower()) + ".app"
 
-    build_dir = tempfile.mkdtemp(prefix="easy-installer-flatpak-")
+    build_dir = tempfile.mkdtemp(prefix="easyinstaller-flatpak-")
     try:
         src_copy = os.path.join(build_dir, "source")
         shutil.copytree(cfg.source, src_copy)
 
         # Ensure runtime is available
         subprocess.run(
-            ["flatpak", "remote-add", "--user", "--if-not-exists",
-             "flathub", "https://dl.flathub.org/repo/flathub.flatpakrepo"],
+            [
+                "flatpak",
+                "remote-add",
+                "--user",
+                "--if-not-exists",
+                "flathub",
+                "https://dl.flathub.org/repo/flathub.flatpakrepo",
+            ],
             check=False,
         )
         subprocess.run(
-            ["flatpak", "install", "--user", "-y",
-             "flathub", "org.freedesktop.Platform//23.08", "org.freedesktop.Sdk//23.08"],
+            [
+                "flatpak",
+                "install",
+                "--user",
+                "-y",
+                "flathub",
+                "org.freedesktop.Platform//23.08",
+                "org.freedesktop.Sdk//23.08",
+            ],
             check=False,
         )
 
@@ -438,32 +472,45 @@ def build_flatpak(cfg: Config) -> str:
             "runtime-version": "23.08",
             "sdk": "org.freedesktop.Sdk",
             "command": cfg.app_exec,
-            "modules": [{
-                "name": _sanitise_name(cfg.app_name),
-                "buildsystem": "simple",
-                "build-commands": [
-                    "mkdir -p /app/bin",
-                    "cp -a . /app/bin/",
-                ],
-                "sources": [{"type": "dir", "path": "source"}],
-            }],
+            "modules": [
+                {
+                    "name": _sanitise_name(cfg.app_name),
+                    "buildsystem": "simple",
+                    "build-commands": [
+                        "mkdir -p /app/bin",
+                        "cp -a . /app/bin/",
+                    ],
+                    "sources": [{"type": "dir", "path": "source"}],
+                }
+            ],
         }
         manifest_path = os.path.join(build_dir, "manifest.json")
         with open(manifest_path, "w") as f:
             json.dump(manifest, f, indent=2)
 
         fp_arch = _flatpak_arch(cfg.arch)
-        _run(["flatpak-builder", "--user", "--force-clean",
-              "--arch", fp_arch,
-              os.path.join(build_dir, "build"), manifest_path])
-        _run(["flatpak", "build-export",
-              "--arch", fp_arch,
-              os.path.join(build_dir, "repo"),
-              os.path.join(build_dir, "build")])
-        _run(["flatpak", "build-bundle",
-              "--arch", fp_arch,
-              os.path.join(build_dir, "repo"),
-              output_file, sanitised_id])
+        _run(
+            [
+                "flatpak-builder",
+                "--user",
+                "--force-clean",
+                "--arch",
+                fp_arch,
+                os.path.join(build_dir, "build"),
+                manifest_path,
+            ]
+        )
+        _run(
+            [
+                "flatpak",
+                "build-export",
+                "--arch",
+                fp_arch,
+                os.path.join(build_dir, "repo"),
+                os.path.join(build_dir, "build"),
+            ]
+        )
+        _run(["flatpak", "build-bundle", "--arch", fp_arch, os.path.join(build_dir, "repo"), output_file, sanitised_id])
     finally:
         shutil.rmtree(build_dir, ignore_errors=True)
 
@@ -472,6 +519,7 @@ def build_flatpak(cfg: Config) -> str:
 
 
 # ── Linux: Snap ──────────────────────────────────────────────────────────────
+
 
 def build_snap(cfg: Config) -> str:
     _require("snapcraft")
@@ -482,7 +530,7 @@ def build_snap(cfg: Config) -> str:
     log.info("Creating Snap: %s", output_file)
 
     sanitised = _sanitise_name(cfg.app_name)
-    snap_dir = tempfile.mkdtemp(prefix="easy-installer-snap-")
+    snap_dir = tempfile.mkdtemp(prefix="easyinstaller-snap-")
     try:
         shutil.copytree(cfg.source, os.path.join(snap_dir, "source"))
         snap_meta = os.path.join(snap_dir, "snap")
@@ -529,21 +577,29 @@ def build_snap(cfg: Config) -> str:
 
 # ── Mac: DMG ─────────────────────────────────────────────────────────────────
 
+
 def build_dmg(cfg: Config) -> str:
     _require("hdiutil")
     output_file = cfg.output + ".dmg"
     log.info("Creating DMG: %s", output_file)
 
-    staging = tempfile.mkdtemp(prefix="easy-installer-dmg-")
+    staging = tempfile.mkdtemp(prefix="easyinstaller-dmg-")
     try:
         shutil.copytree(cfg.source, staging, dirs_exist_ok=True)
-        _run([
-            "hdiutil", "create",
-            "-volname", cfg.app_name,
-            "-srcfolder", staging,
-            "-ov", "-format", "UDZO",
-            output_file,
-        ])
+        _run(
+            [
+                "hdiutil",
+                "create",
+                "-volname",
+                cfg.app_name,
+                "-srcfolder",
+                staging,
+                "-ov",
+                "-format",
+                "UDZO",
+                output_file,
+            ]
+        )
     finally:
         shutil.rmtree(staging, ignore_errors=True)
 
@@ -553,6 +609,7 @@ def build_dmg(cfg: Config) -> str:
 
 # ── Mac: .app bundle ────────────────────────────────────────────────────────
 
+
 def build_app(cfg: Config) -> str:
     if not cfg.app_exec:
         raise RuntimeError("--app-exec is required for .app bundles")
@@ -561,9 +618,10 @@ def build_app(cfg: Config) -> str:
     log.info("Creating .app bundle: %s", output_file)
 
     import re
+
     bundle_id = "com." + re.sub(r"[^a-z0-9]", "", cfg.app_name.lower()) + ".app"
 
-    staging = tempfile.mkdtemp(prefix="easy-installer-app-")
+    staging = tempfile.mkdtemp(prefix="easyinstaller-app-")
     try:
         app_root = os.path.join(staging, os.path.basename(output_file))
         contents = os.path.join(app_root, "Contents")
@@ -578,7 +636,7 @@ def build_app(cfg: Config) -> str:
         launcher = os.path.join(macos, cfg.app_exec)
         with open(launcher, "w") as f:
             f.write(
-                '#!/bin/bash\n'
+                "#!/bin/bash\n"
                 'DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"\n'
                 f'exec "${{DIR}}/{cfg.app_exec}" "$@"\n'
             )
@@ -588,32 +646,29 @@ def build_app(cfg: Config) -> str:
         icon_entry = ""
         if cfg.app_icon and os.path.isfile(cfg.app_icon):
             icon_name = os.path.basename(cfg.app_icon)
-            icon_entry = (
-                '    <key>CFBundleIconFile</key>\n'
-                f'    <string>{icon_name}</string>\n'
-            )
+            icon_entry = "    <key>CFBundleIconFile</key>\n" f"    <string>{icon_name}</string>\n"
         with open(os.path.join(contents, "Info.plist"), "w") as f:
             f.write(
                 '<?xml version="1.0" encoding="UTF-8"?>\n'
                 '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
                 ' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
                 '<plist version="1.0">\n'
-                '<dict>\n'
-                '    <key>CFBundleExecutable</key>\n'
-                f'    <string>{cfg.app_exec}</string>\n'
-                '    <key>CFBundleIdentifier</key>\n'
-                f'    <string>{bundle_id}</string>\n'
-                '    <key>CFBundleName</key>\n'
-                f'    <string>{cfg.app_name}</string>\n'
-                '    <key>CFBundleVersion</key>\n'
-                f'    <string>{cfg.app_version}</string>\n'
-                '    <key>CFBundleShortVersionString</key>\n'
-                f'    <string>{cfg.app_version}</string>\n'
-                '    <key>CFBundlePackageType</key>\n'
-                '    <string>APPL</string>\n'
-                f'{icon_entry}'
-                '</dict>\n'
-                '</plist>\n'
+                "<dict>\n"
+                "    <key>CFBundleExecutable</key>\n"
+                f"    <string>{cfg.app_exec}</string>\n"
+                "    <key>CFBundleIdentifier</key>\n"
+                f"    <string>{bundle_id}</string>\n"
+                "    <key>CFBundleName</key>\n"
+                f"    <string>{cfg.app_name}</string>\n"
+                "    <key>CFBundleVersion</key>\n"
+                f"    <string>{cfg.app_version}</string>\n"
+                "    <key>CFBundleShortVersionString</key>\n"
+                f"    <string>{cfg.app_version}</string>\n"
+                "    <key>CFBundlePackageType</key>\n"
+                "    <string>APPL</string>\n"
+                f"{icon_entry}"
+                "</dict>\n"
+                "</plist>\n"
             )
 
         if cfg.app_icon and os.path.isfile(cfg.app_icon):

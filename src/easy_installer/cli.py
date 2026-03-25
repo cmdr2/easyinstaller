@@ -1,4 +1,4 @@
-"""Command-line interface for easy-installer."""
+"""Command-line interface for easyinstaller."""
 
 from __future__ import annotations
 
@@ -14,13 +14,13 @@ from .config import (
 )
 from .builders import build
 
-log = logging.getLogger("easy-installer")
+log = logging.getLogger("easyinstaller")
 
 
 def _build_parser() -> argparse.ArgumentParser:
     all_types = sorted({t for types in TYPES_BY_OS.values() for t in types})
     parser = argparse.ArgumentParser(
-        prog="easy-installer",
+        prog="easyinstaller",
         description="Create an installer or archive from a release folder.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -30,10 +30,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "  Mac:      zip, tar.gz, dmg, app\n"
             "\n"
             "examples:\n"
-            "  easy-installer --source ./build --os linux --arch x86_64 --type tar.gz --output myapp-linux-x64\n"
-            "  easy-installer --source ./build --os linux --arch x86_64 --type deb --output myapp \\\n"
+            "  easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz --output myapp-linux-x64\n"
+            "  easyinstaller --source ./build --os linux --arch x86_64 --type deb --output myapp \\\n"
             "      --app-name MyApp --app-version 1.0.0 --app-exec myapp\n"
-            "  easy-installer --source ./build --os mac --arch arm64 --type app --output MyApp \\\n"
+            "  easyinstaller --source ./build --os mac --arch arm64 --type app --output MyApp \\\n"
             "      --app-name MyApp --app-exec myapp\n"
         ),
     )
@@ -42,15 +42,15 @@ def _build_parser() -> argparse.ArgumentParser:
     required.add_argument("--source", required=True, help="Path to the release folder to package")
     required.add_argument("--os", required=True, dest="target_os", help="Target OS: windows, linux, mac")
     required.add_argument("--arch", required=True, help="Target architecture: x86_64, arm64, i386, armhf")
-    required.add_argument("--type", required=True, dest="target_type",
-                          help=f"Package type: {', '.join(all_types)}")
+    required.add_argument("--type", required=True, dest="target_type", help=f"Package type: {', '.join(all_types)}")
     required.add_argument("--output", required=True, help="Output file name (without extension)")
 
     optional = parser.add_argument_group("optional metadata")
     optional.add_argument("--app-name", default="", help="Application name (defaults to output name)")
     optional.add_argument("--app-version", default="1.0.0", help="Application version (default: 1.0.0)")
-    optional.add_argument("--app-description", default="Application packaged with easy-installer",
-                          help="Short description")
+    optional.add_argument(
+        "--app-description", default="Application packaged with easyinstaller", help="Short description"
+    )
     optional.add_argument("--app-maintainer", default="maintainer@example.com", help="Maintainer email")
     optional.add_argument("--app-category", default="Utility", help="Application category")
     optional.add_argument("--app-exec", default=None, help="Main executable name (relative to source dir)")
@@ -66,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
-        format="[easy-installer] %(message)s",
+        format="[easyinstaller] %(message)s",
     )
 
     cfg = Config(
@@ -92,7 +92,11 @@ def main(argv: list[str] | None = None) -> int:
 
     log.info(
         "Packaging: source=%s os=%s arch=%s type=%s output=%s",
-        cfg.source, cfg.target_os, cfg.arch, cfg.target_type, cfg.output,
+        cfg.source,
+        cfg.target_os,
+        cfg.arch,
+        cfg.target_type,
+        cfg.output,
     )
 
     try:
