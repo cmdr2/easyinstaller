@@ -234,9 +234,12 @@ jobs:
           run_demo "/usr/bin/$APP_BINARY_NAME"
           sudo dpkg -r "$PACKAGE_NAME"
 
-          sudo rpm -i "$OUTPUT_DIR/demo-easyinstaller-linux-x64.rpm"
-          run_demo "/opt/$PACKAGE_NAME/$APP_BINARY_NAME"
-          sudo rpm -e "$PACKAGE_NAME"
+          rpm -qip "$OUTPUT_DIR/demo-easyinstaller-linux-x64.rpm"
+          rpm -qlp "$OUTPUT_DIR/demo-easyinstaller-linux-x64.rpm" | grep -F "/opt/$PACKAGE_NAME/$APP_BINARY_NAME"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/$OUTPUT_DIR:/packages:ro" \
+            fedora:latest \
+            bash -lc "set -euo pipefail && dnf install -y /packages/demo-easyinstaller-linux-x64.rpm && output=\$(/opt/$PACKAGE_NAME/$APP_BINARY_NAME --headless) && [[ \$output == *'Hello easyinstaller'* ]] && dnf remove -y $PACKAGE_NAME"
 
           chmod +x "$OUTPUT_DIR/demo-easyinstaller-linux-x64.AppImage"
           appimage_output="$("$OUTPUT_DIR/demo-easyinstaller-linux-x64.AppImage" --appimage-extract-and-run --headless)"
