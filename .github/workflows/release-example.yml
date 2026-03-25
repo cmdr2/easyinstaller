@@ -321,10 +321,12 @@ jobs:
             echo "Make sure MAC_CERTIFICATE_P12_BASE64 was created from developer-id.p12 and MAC_CERTIFICATE_PASSWORD matches the Export Password used by openssl pkcs12 -export."
             exit 1
           fi
+          openssl pkcs12 -in cert.p12 -passin env:MAC_CERTIFICATE_PASSWORD -nodes -out cert.pem
+          openssl pkcs12 -export -legacy -in cert.pem -out cert-compat.p12 -passout env:MAC_CERTIFICATE_PASSWORD
           security create-keychain -p "$RUNNER_TEMP" build.keychain
           security unlock-keychain -p "$RUNNER_TEMP" build.keychain
           security default-keychain -s build.keychain
-          security import cert.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security import cert-compat.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
           security list-keychains -d user -s build.keychain
 
