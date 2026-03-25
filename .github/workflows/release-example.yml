@@ -307,7 +307,7 @@ jobs:
         id: check-signing
         shell: bash
         run: |
-          echo "enabled=${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_SIGN_IDENTITY != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}" >> "$GITHUB_OUTPUT"
+          echo "enabled=${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_NAME != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}" >> "$GITHUB_OUTPUT"
 
       - name: Import signing certificate
         if: steps.check-signing.outputs.enabled == 'true'
@@ -348,7 +348,7 @@ jobs:
           if [[ "${{ steps.check-signing.outputs.enabled }}" == "true" ]]; then
             notarize_args=(
               --mac-notarize
-              --mac-sign-identity "${{ secrets.MAC_SIGN_IDENTITY }}"
+              --mac-sign-identity "Developer ID Application: ${{ secrets.MAC_NOTARY_TEAM_NAME }} (${{ secrets.MAC_NOTARY_TEAM_ID }})"
               --mac-notary-apple-id "${{ secrets.MAC_NOTARY_APPLE_ID }}"
               --mac-notary-team-id "${{ secrets.MAC_NOTARY_TEAM_ID }}"
               --mac-notary-password "${{ secrets.MAC_NOTARY_PASSWORD }}"
