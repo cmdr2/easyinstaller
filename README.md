@@ -26,7 +26,8 @@ easyinstaller --source <dir> --os <os> --arch <arch> --type <type> --output <nam
 
 See [docs/cli.md](docs/cli.md) for the full argument list, notarization flags, and examples.
 
-Guides to building installers for:
+## Guides
+Building installers for:
 - [Windows](docs/windows.md)
 - [Linux](docs/linux.md)
 - [macOS](docs/mac.md)
