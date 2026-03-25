@@ -153,6 +153,8 @@ def validate_and_normalise(cfg: Config) -> Config:
             raise ConfigError("--mac-notarize is only supported for mac targets")
         if not cfg.mac_sign_identity:
             raise ConfigError("--mac-notarize requires --mac-sign-identity")
+        if target_type not in {"zip", "dmg", "app", "app-in-dmg"}:
+            raise ConfigError("--mac-notarize is only supported for mac types: zip, dmg, app, app-in-dmg")
         has_keychain_profile = bool(cfg.mac_notary_keychain_profile)
         has_direct_credentials = all([cfg.mac_notary_apple_id, cfg.mac_notary_team_id, cfg.mac_notary_password])
         if not has_keychain_profile and not has_direct_credentials:

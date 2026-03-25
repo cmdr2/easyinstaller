@@ -74,6 +74,19 @@ class TestValidation:
                 mac_sign_identity="Developer ID Application: Example",
             )
 
+    def test_mac_notarize_rejects_tar_gz(self, source_dir, output_path):
+        with pytest.raises(ConfigError, match="only supported for mac types: zip, dmg, app, app-in-dmg"):
+            base_cfg(
+                source_dir,
+                output_path,
+                target_os="mac",
+                target_type="tar.gz",
+                arch="arm64",
+                mac_notarize=True,
+                mac_sign_identity="Developer ID Application: Example",
+                mac_notary_keychain_profile="notary-profile",
+            )
+
     def test_invalid_type(self, source_dir, output_path):
         with pytest.raises(ConfigError, match="Unsupported type"):
             base_cfg(source_dir, output_path, target_type="msi")

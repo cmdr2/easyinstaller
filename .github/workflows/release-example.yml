@@ -366,7 +366,7 @@ jobs:
           fi
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base" "${notarize_args[@]}"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base" "${notarize_args[@]}"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type dmg --output "$dmg_base" --app-name "$APP_NAME" "${notarize_args[@]}"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-dmg --output "$app_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
 
