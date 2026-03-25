@@ -29,9 +29,10 @@ def build_nsis(cfg: Config) -> str:
     display_version = _escape_nsis_string(cfg.app_version)
     finish_page_macros = ""
     if cfg.app_exec:
+        app_exec_win = cfg.app_exec.replace("/", "\\")
         finish_page_macros = "\n".join(
             [
-                f'!define MUI_FINISHPAGE_RUN "$INSTDIR\\{_escape_nsis_string(cfg.app_exec.replace("/", "\\"))}"',
+                f'!define MUI_FINISHPAGE_RUN "$INSTDIR\\{_escape_nsis_string(app_exec_win)}"',
                 f'!define MUI_FINISHPAGE_RUN_TEXT "Launch {display_name}"',
             ]
         )
