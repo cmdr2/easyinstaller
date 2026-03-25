@@ -36,6 +36,25 @@ class TestBuildNsis:
         assert script.index('RMDir "$INSTDIR\\sub\\deep"') < script.index('RMDir "$INSTDIR\\sub"')
         assert any(call["args"][0] == "makensis" for call in calls)
 
+    def test_generated_script_omits_finish_page_run_without_app_exec(self, tmp_path, command_spy):
+        _calls, patch_run, _patch_subprocess = command_spy
+        captured = {}
+
+        def inspect_script(args, _kwargs):
+            captured["script"] = pathlib.Path(args[1]).read_text()
+
+        patch_run("easyinstaller.builders.nsis", side_effect=inspect_script)
+
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "app.exe").write_text("binary")
+
+        cfg = base_cfg(str(src), str(tmp_path / "setup"), target_os="windows", target_type="nsis")
+        build_nsis(cfg)
+
+        assert "!define MUI_FINISHPAGE_RUN " not in captured["script"]
+        assert "!define MUI_FINISHPAGE_RUN_TEXT " not in captured["script"]
+
     def test_generated_script_includes_nested_file_deletes(self, tmp_path, command_spy):
         _calls, patch_run, _patch_subprocess = command_spy
         captured = {}
@@ -89,3 +108,30 @@ class TestBuildNsis:
             'WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\My \'Quoted\' App-Suite" "DisplayVersion" "1.0$\\"beta"'
             in captured["script"]
         )
+
+    def test_generated_script_adds_finish_page_run_for_app_exec(self, tmp_path, command_spy):
+        _calls, patch_run, _patch_subprocess = command_spy
+        captured = {}
+
+        def inspect_script(args, _kwargs):
+            captured["script"] = pathlib.Path(args[1]).read_text()
+
+        patch_run("easyinstaller.builders.nsis", side_effect=inspect_script)
+
+        src = tmp_path / "src"
+        nested_dir = src / "bin"
+        nested_dir.mkdir(parents=True)
+        (nested_dir / "myapp.exe").write_text("binary")
+
+        cfg = base_cfg(
+            str(src),
+            str(tmp_path / "setup"),
+            target_os="windows",
+            target_type="nsis",
+            app_name="My App",
+            app_exec="bin/myapp.exe",
+        )
+        build_nsis(cfg)
+
+        assert '!define MUI_FINISHPAGE_RUN "$INSTDIR\\bin\\myapp.exe"' in captured["script"]
+        assert '!define MUI_FINISHPAGE_RUN_TEXT "Launch My App"' in captured["script"]

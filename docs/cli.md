@@ -26,7 +26,7 @@ easyinstaller --source <dir> --os <os> --arch <arch> --type <type> --output <nam
 | `--app-description` | `Application packaged with easyinstaller` | deb, rpm, snap |
 | `--app-maintainer` | `maintainer@example.com` | deb |
 | `--app-category` | `Utility` | deb, appimage |
-| `--app-exec` | none | appimage, flatpak, snap, app, app-in-dmg. Required for those targets and must stay inside the source tree |
+| `--app-exec` | none | nsis, appimage, flatpak, snap, app, app-in-dmg. Optional for nsis; required for the other listed targets and must stay inside the source tree |
 | `--app-icon` | none | appimage, app |
 
 ## mac notarization flags

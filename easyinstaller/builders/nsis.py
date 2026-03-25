@@ -27,6 +27,14 @@ def build_nsis(cfg: Config) -> str:
     display_name = _escape_nsis_string(cfg.app_name)
     install_name = _escape_nsis_string(_normalise_nsis_component(cfg.app_name))
     display_version = _escape_nsis_string(cfg.app_version)
+    finish_page_macros = ""
+    if cfg.app_exec:
+        finish_page_macros = "\n".join(
+            [
+                f'!define MUI_FINISHPAGE_RUN "$INSTDIR\\{_escape_nsis_string(cfg.app_exec.replace("/", "\\"))}"',
+                f'!define MUI_FINISHPAGE_RUN_TEXT "Launch {display_name}"',
+            ]
+        )
 
     install_lines: list[str] = []
     uninstall_lines: list[str] = []
@@ -53,6 +61,7 @@ def build_nsis(cfg: Config) -> str:
         install_name=install_name,
         app_version=display_version,
         output_file=output_file,
+        finish_page_macros=finish_page_macros,
         install_files="\n".join(install_lines),
         uninstall_files="\n".join(uninstall_lines),
     )
@@ -78,6 +87,7 @@ RequestExecutionLevel admin
 
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+{finish_page_macros}
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES

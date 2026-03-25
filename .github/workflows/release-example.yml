@@ -60,7 +60,7 @@ jobs:
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$archive_base" --app-name "$APP_NAME" --app-version "$version"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$archive_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
 
       - name: Upload Windows release assets
         uses: softprops/action-gh-release@v2
