@@ -46,7 +46,7 @@ def build_snap(cfg: Config) -> str:
                 f"    command: {cfg.app_exec}\n"
             )
 
-        _run(["snapcraft", "--destructive-mode"], cwd=snap_dir)
+        _run(["snapcraft", "pack", "--destructive-mode"], cwd=snap_dir)
 
         built = None
         for filename in os.listdir(snap_dir):

@@ -36,4 +36,4 @@ class TestBuildSnap:
         assert os.path.isfile(result)
         assert "name: my-app" in captured["snapcraft"]
         assert "command: myapp" in captured["snapcraft"]
-        assert any(call["args"][0] == "snapcraft" for call in calls)
+        assert any(call["args"][:2] == ["snapcraft", "pack"] for call in calls)

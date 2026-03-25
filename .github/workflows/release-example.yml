@@ -93,6 +93,7 @@ jobs:
           sudo apt-get install -y cmake dpkg rpm flatpak flatpak-builder squashfs-tools snapd
           sudo systemctl start snapd.socket
           sudo snap install snapcraft --classic
+          sudo snap install core22
 
       - name: Install easyinstaller
         shell: bash
