@@ -32,7 +32,7 @@ Building installers for:
 - [Linux](docs/linux.md)
 - [macOS](docs/mac.md)
 
-See [example/](example/) for a minimal CMake project and a release workflow that packages it with easyinstaller.
+See [release-example.yml](.github/workflows/release-example.yml) for a minimal GitHub Actions workflow that builds an example project for Windows, Linux, and macOS, and releases installers for it.
 
 ### Examples
 
