@@ -28,5 +28,8 @@ class TestBuildZip:
         )
         build_zip(cfg)
 
-        assert any(call["args"][:3] == ["xcrun", "notarytool", "submit"] for call in calls)
+        submit_calls = [call for call in calls if call["args"][:3] == ["xcrun", "notarytool", "submit"]]
+
+        assert submit_calls
+        assert submit_calls[0]["kwargs"] == {"stdout": -1, "stderr": -1, "text": True}
         assert not any(call["args"][:3] == ["xcrun", "stapler", "staple"] for call in calls)

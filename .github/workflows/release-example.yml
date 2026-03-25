@@ -408,14 +408,20 @@ jobs:
             spctl --assess --verbose=4 --type open "$target_path"
           }
 
-          assess_gatekeeper_execute() {
-            local container_path="$1"
-            local target_path="$2"
+          assess_gatekeeper_app() {
+            local target_path="$1"
             if [[ "$signing_enabled" != "true" ]]; then
               return 0
             fi
-            mark_as_downloaded "$container_path"
             spctl --assess --verbose=4 --type execute "$target_path"
+          }
+
+          verify_signed_binary() {
+            local target_path="$1"
+            if [[ "$signing_enabled" != "true" ]]; then
+              return 0
+            fi
+            codesign --verify --verbose=4 --strict "$target_path"
           }
 
           run_demo() {
@@ -454,13 +460,14 @@ jobs:
           }
 
           rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount" "$dmg_extract" "$app_dmg_extract"
+          assess_gatekeeper_open "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip"
           unzip -q "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip" -d "$zip_extract"
-          assess_gatekeeper_execute "$zip_extract/$package_root" "$zip_extract/$package_root/$APP_EXECUTABLE"
+          verify_signed_binary "$zip_extract/$package_root/$APP_EXECUTABLE"
           run_demo "$zip_extract/$package_root/$APP_EXECUTABLE"
 
           mkdir -p "$targz_extract"
           tar -xzf "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.tar.gz" -C "$targz_extract"
-          assess_gatekeeper_execute "$targz_extract/$package_root" "$targz_extract/$package_root/$APP_EXECUTABLE"
+          verify_signed_binary "$targz_extract/$package_root/$APP_EXECUTABLE"
           run_demo "$targz_extract/$package_root/$APP_EXECUTABLE"
 
           mkdir -p "$dmg_mount"
@@ -468,7 +475,7 @@ jobs:
           hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
           copy_mount_contents "$dmg_mount" "$dmg_extract"
           hdiutil detach "$dmg_mount"
-          assess_gatekeeper_execute "$dmg_extract" "$(find_dmg_binary "$dmg_extract")"
+          verify_signed_binary "$(find_dmg_binary "$dmg_extract")"
           run_demo "$(find_dmg_binary "$dmg_extract")"
 
           mkdir -p "$app_dmg_mount"
@@ -477,7 +484,8 @@ jobs:
           mkdir -p "$app_dmg_extract"
           ditto "$app_dmg_mount/$APP_NAME.app" "$app_dmg_extract/$APP_NAME.app"
           hdiutil detach "$app_dmg_mount"
-          assess_gatekeeper_execute "$app_dmg_extract/$APP_NAME.app" "$app_dmg_extract/$APP_NAME.app"
+          mark_as_downloaded "$app_dmg_extract/$APP_NAME.app"
+          assess_gatekeeper_app "$app_dmg_extract/$APP_NAME.app"
           run_demo "$app_dmg_extract/$APP_NAME.app/Contents/MacOS/$APP_EXECUTABLE"
 
       - name: Upload macOS release assets

@@ -6,6 +6,7 @@ import os
 import plistlib
 import shutil
 import stat
+import subprocess
 import tempfile
 from pathlib import PurePosixPath
 
@@ -52,6 +53,26 @@ def _notarytool_auth_args(cfg: Config) -> list[str]:
     ]
 
 
+def _summarise_command_failure(exc: subprocess.CalledProcessError) -> str:
+    command = " ".join(str(arg) for arg in (exc.cmd or [])) or "command"
+    output = exc.stderr or exc.stdout or ""
+    summary = ""
+    if output:
+        lines = [line.strip() for line in output.splitlines() if line.strip()]
+        if lines:
+            summary = lines[-1]
+    if summary:
+        return f"{command} failed with exit code {exc.returncode}: {summary}"
+    return f"{command} failed with exit code {exc.returncode}"
+
+
+def _run_quiet(args: list[str]) -> None:
+    try:
+        _run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(_summarise_command_failure(exc)) from exc
+
+
 def _prepare_mac_source(cfg: Config, prefix: str) -> tuple[str, str]:
     temp_root = tempfile.mkdtemp(prefix=prefix)
     source_copy = os.path.join(temp_root, os.path.basename(cfg.source))
@@ -67,11 +88,11 @@ def _prepare_mac_source(cfg: Config, prefix: str) -> tuple[str, str]:
 
 
 def _submit_for_notarization(target: str, cfg: Config) -> None:
-    _run(["xcrun", "notarytool", "submit", target, "--wait", *_notarytool_auth_args(cfg)])
+    _run_quiet(["xcrun", "notarytool", "submit", target, "--wait", *_notarytool_auth_args(cfg)])
 
 
 def _staple_ticket(target: str) -> None:
-    _run(["xcrun", "stapler", "staple", "-v", target])
+    _run_quiet(["xcrun", "stapler", "staple", target])
 
 
 def _finalize_mac_output(cfg: Config, output_file: str) -> None:

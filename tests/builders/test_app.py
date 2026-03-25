@@ -79,7 +79,10 @@ class TestBuildApp:
         )
         result = build_app(cfg)
 
+        staple_calls = [call for call in calls if call["args"][:3] == ["xcrun", "stapler", "staple"]]
+
         assert any(
             call["args"][:3] == ["xcrun", "notarytool", "submit"] and call["args"][3] == result for call in calls
         )
         assert any(call["args"][:3] == ["xcrun", "stapler", "staple"] and call["args"][-1] == result for call in calls)
+        assert staple_calls[0]["kwargs"] == {"stdout": -1, "stderr": -1, "text": True}
