@@ -10,6 +10,9 @@ from ..config import Config
 from .common import _require, _run, _sanitise_name, log
 
 
+SNAP_BASE = "core24"
+
+
 def build_snap(cfg: Config) -> str:
     _require("snapcraft")
     if not cfg.app_exec:
@@ -32,7 +35,7 @@ def build_snap(cfg: Config) -> str:
                 f"summary: {cfg.app_description}\n"
                 f"description: |\n"
                 f"  {cfg.app_description}\n"
-                f"base: core22\n"
+                f"base: {SNAP_BASE}\n"
                 f"grade: stable\n"
                 f"confinement: strict\n"
                 f"\n"

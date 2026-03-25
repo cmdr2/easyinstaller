@@ -37,7 +37,10 @@ Run: `easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz --ou
 
 ## flatpak
 
-1. Install Flatpak tooling. On Debian or Ubuntu: `sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder`. On Fedora: `sudo dnf install -y flatpak flatpak-builder`.
+1. Install Flatpak tooling:
+- On Debian or Ubuntu: `sudo apt-get update && sudo apt-get install -y flatpak flatpak-builder`
+- On Fedora: `sudo dnf install -y flatpak flatpak-builder`
+- `easyinstaller` currently targets the Freedesktop `24.08` runtime and SDK when building Flatpaks.
 2. Run: `easyinstaller --source ./build --os linux --arch x86_64 --type flatpak --output myapp --app-name "My App" --app-version 1.0.0 --app-exec myapp`.
 
 `myapp.flatpak` will be written in the current directory.
@@ -45,6 +48,7 @@ Run: `easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz --ou
 ## snap
 
 1. Install Snapcraft with `sudo snap install snapcraft --classic`, or follow https://snapcraft.io/docs/installing-snapcraft.
-2. Run: `easyinstaller --source ./build --os linux --arch x86_64 --type snap --output myapp --app-name "My App" --app-version 1.0.0 --app-exec myapp`.
+2. Install the `core24` base if your environment does not already have it: `sudo snap install core24`.
+3. Run: `easyinstaller --source ./build --os linux --arch x86_64 --type snap --output myapp --app-name "My App" --app-version 1.0.0 --app-exec myapp`.
 
 `myapp.snap` will be written in the current directory.

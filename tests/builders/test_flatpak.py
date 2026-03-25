@@ -39,6 +39,7 @@ class TestBuildFlatpak:
 
         assert result.endswith(".flatpak")
         assert '"command": "myapp"' in captured["manifest"]
+        assert '"runtime-version": "24.08"' in captured["manifest"]
         assert any(call["kind"] == "subprocess" and call["args"][0] == "flatpak" for call in calls)
         assert any(
             call["kind"] == "run"

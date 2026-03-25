@@ -11,6 +11,9 @@ from ..config import Config
 from .common import _flatpak_arch, _require, _run, _sanitise_name, log
 
 
+FLATPAK_RUNTIME_VERSION = "24.08"
+
+
 def build_flatpak(cfg: Config) -> str:
     if not cfg.app_exec:
         raise RuntimeError("--app-exec is required for Flatpak")
@@ -48,8 +51,8 @@ def build_flatpak(cfg: Config) -> str:
                 "--user",
                 "-y",
                 "flathub",
-                "org.freedesktop.Platform//23.08",
-                "org.freedesktop.Sdk//23.08",
+                f"org.freedesktop.Platform//{FLATPAK_RUNTIME_VERSION}",
+                f"org.freedesktop.Sdk//{FLATPAK_RUNTIME_VERSION}",
             ],
             check=False,
         )
@@ -57,7 +60,7 @@ def build_flatpak(cfg: Config) -> str:
         manifest = {
             "app-id": sanitised_id,
             "runtime": "org.freedesktop.Platform",
-            "runtime-version": "23.08",
+            "runtime-version": FLATPAK_RUNTIME_VERSION,
             "sdk": "org.freedesktop.Sdk",
             "command": cfg.app_exec,
             "modules": [

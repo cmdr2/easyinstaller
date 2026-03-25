@@ -38,11 +38,17 @@ Run: `easyinstaller --source ./build --os mac --arch arm64 --type app-in-dmg --o
 
 1. Join the Apple Developer Program: https://developer.apple.com/programs/.
 2. Open Certificates, IDs & Profiles: https://developer.apple.com/account/resources/certificates/list.
-3. Generate a private key and CSR on any machine: `openssl genrsa -out developer-id.key 2048` then `openssl req -new -key developer-id.key -out developer-id.csr -subj "/CN=Your Name/OU=Your Org/O=Your Company/C=US"`.
-4. Create a `Developer ID Application` certificate in the Apple Developer page and upload `developer-id.csr`.
-5. Download the certificate, convert it to PEM with `openssl x509 -inform DER -in developer-id.cer -out developer-id.pem -outform PEM`, then export a `.p12` with `openssl pkcs12 -export -inkey developer-id.key -in developer-id.pem -out developer-id.p12`.
+3. Generate a private key and CSR on any machine:
+- `openssl genrsa -out developer-id.key 2048`
+- `openssl req -new -key developer-id.key -out developer-id.csr -subj "/CN=DOES_NOT_MATTER/OU=DOES_NOT_MATTER/O=DOES_NOT_MATTER/C=US"`
+4. Create a `Developer ID Application` certificate in the Apple Developer page, select `G2 Sub-CA (Xcode 11.4.1 or later)` and upload `developer-id.csr`.
+5. Download the certificate, then
+- convert it to PEM with `openssl x509 -inform DER -in developer-id.cer -out developer-id.pem -outform PEM`
+- then export a `.p12` with `openssl pkcs12 -export -inkey developer-id.key -in developer-id.pem -out developer-id.p12`
 6. Note your Team ID from the Apple Developer account page.
 7. Create an app-specific password at https://appleid.apple.com/.
+
+The certificate can be reused for signing multiple apps and does not need to be regenerated for each app or release.
 
 Now, you can either notarize on a local Mac or set up GitHub Actions for CI notarization.
 
