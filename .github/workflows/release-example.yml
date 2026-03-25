@@ -399,21 +399,20 @@ jobs:
             fi
           }
 
-          assess_gatekeeper_open() {
-            local target_path="$1"
-            if [[ "$signing_enabled" != "true" ]]; then
-              return 0
-            fi
-            mark_as_downloaded "$target_path"
-            spctl --assess --verbose=4 --type open "$target_path"
-          }
-
           assess_gatekeeper_app() {
             local target_path="$1"
             if [[ "$signing_enabled" != "true" ]]; then
               return 0
             fi
             spctl --assess --verbose=4 --type execute "$target_path"
+          }
+
+          validate_stapled_ticket() {
+            local target_path="$1"
+            if [[ "$signing_enabled" != "true" ]]; then
+              return 0
+            fi
+            xcrun stapler validate "$target_path"
           }
 
           verify_signed_binary() {
@@ -470,7 +469,7 @@ jobs:
           run_demo "$targz_extract/$package_root/$APP_EXECUTABLE"
 
           mkdir -p "$dmg_mount"
-          assess_gatekeeper_open "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
           hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
           copy_mount_contents "$dmg_mount" "$dmg_extract"
           hdiutil detach "$dmg_mount"
@@ -478,7 +477,7 @@ jobs:
           run_demo "$(find_dmg_binary "$dmg_extract")"
 
           mkdir -p "$app_dmg_mount"
-          assess_gatekeeper_open "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
           hdiutil attach -nobrowse -readonly -mountpoint "$app_dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
           mkdir -p "$app_dmg_extract"
           ditto "$app_dmg_mount/$APP_NAME.app" "$app_dmg_extract/$APP_NAME.app"
