@@ -32,6 +32,8 @@ Building installers for:
 - [Linux](docs/linux.md)
 - [macOS](docs/mac.md)
 
+See [example/](example/) for a minimal CMake project and a release workflow that packages it with easyinstaller.
+
 ### Examples
 
 ```bash
@@ -75,7 +77,7 @@ Other formats require the corresponding tool to be installed on the build machin
 
 | Type       | Requires          |
 |------------|-------------------|
-| `nsis`     | `makensis`        |
+| `nsis`     | [makensis](https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download) |
 | `deb`      | `dpkg-deb`        |
 | `rpm`      | `rpmbuild`        |
 | `appimage` | `appimagetool` (auto-downloaded if missing) |

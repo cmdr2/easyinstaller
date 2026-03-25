@@ -1,0 +1,220 @@
+name: Release Example Packages
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: Hello easyinstaller
+  APP_EXECUTABLE: hello_easyinstaller
+
+jobs:
+  build-windows:
+    name: Build Windows Packages
+    runs-on: windows-latest
+    env:
+      TARGET_OS: windows
+      TARGET_ARCH: x86_64
+      RELEASE_DIR: example/release/windows-x86_64
+      OUTPUT_DIR: dist/windows
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install easyinstaller
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Install NSIS
+        shell: bash
+        run: |
+          nsis_zip="$RUNNER_TEMP/nsis-3.11.zip"
+          curl -L 'https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download' -o "$nsis_zip"
+          unzip -q "$nsis_zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/nsis-3.11" >> "$GITHUB_PATH"
+
+      - name: Build example release folder
+        shell: bash
+        run: |
+          cmake -S example -B example/build/windows -DCMAKE_BUILD_TYPE=Release
+          cmake --build example/build/windows --config Release
+          rm -rf "$RELEASE_DIR"
+          cmake --install example/build/windows --config Release --prefix "$RELEASE_DIR"
+
+      - name: Package Windows artifacts
+        shell: bash
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          version="${GITHUB_REF_NAME#v}"
+          archive_base="$OUTPUT_DIR/hello-easyinstaller-windows-x64"
+
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$archive_base" --app-name "$APP_NAME" --app-version "$version"
+
+      - name: Upload Windows release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/windows/*
+          fail_on_unmatched_files: true
+
+  build-linux:
+    name: Build Linux Packages
+    runs-on: ubuntu-latest
+    env:
+      TARGET_OS: linux
+      TARGET_ARCH: x86_64
+      RELEASE_DIR: example/release/linux-x86_64
+      OUTPUT_DIR: dist/linux
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build and packaging tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake dpkg rpm flatpak flatpak-builder squashfs-tools snapd
+          sudo systemctl start snapd.socket
+          sudo snap install snapcraft --classic
+
+      - name: Install easyinstaller
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Build example release folder
+        shell: bash
+        run: |
+          cmake -S example -B example/build/linux -DCMAKE_BUILD_TYPE=Release
+          cmake --build example/build/linux --config Release
+          rm -rf "$RELEASE_DIR"
+          cmake --install example/build/linux --prefix "$RELEASE_DIR"
+
+      - name: Package Linux artifacts
+        shell: bash
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          version="${GITHUB_REF_NAME#v}"
+          base="$OUTPUT_DIR/hello-easyinstaller-linux-x64"
+
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$base"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$base"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type deb --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type rpm --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type appimage --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type flatpak --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type snap --output "$base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE"
+
+      - name: Upload Linux release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/linux/*
+          fail_on_unmatched_files: true
+
+  build-macos:
+    name: Build macOS Packages
+    runs-on: macos-latest
+    env:
+      TARGET_OS: mac
+      TARGET_ARCH: arm64
+      RELEASE_DIR: example/release/macos-arm64
+      OUTPUT_DIR: dist/macos
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install easyinstaller
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Import signing certificate
+        if: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_SIGN_IDENTITY != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}
+        shell: bash
+        env:
+          MAC_CERTIFICATE_P12_BASE64: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$MAC_CERTIFICATE_P12_BASE64" | base64 --decode > cert.p12
+          security create-keychain -p "$RUNNER_TEMP" build.keychain
+          security unlock-keychain -p "$RUNNER_TEMP" build.keychain
+          security default-keychain -s build.keychain
+          security import cert.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
+          security list-keychains -d user -s build.keychain
+
+      - name: Build example release folder
+        shell: bash
+        run: |
+          # Apple Silicon binaries require macOS 11.0 or newer even when built on the latest runner.
+          cmake -S example -B example/build/macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          cmake --build example/build/macos --config Release
+          rm -rf "$RELEASE_DIR"
+          cmake --install example/build/macos --config Release --prefix "$RELEASE_DIR"
+
+      - name: Package macOS artifacts
+        shell: bash
+        env:
+          MAC_SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
+          MAC_NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
+          MAC_NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
+          MAC_NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          version="${GITHUB_REF_NAME#v}"
+          archive_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64"
+          dmg_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64-files"
+          app_base="$OUTPUT_DIR/hello-easyinstaller-macos-arm64-app"
+          notarize_args=()
+
+          if [[ -n "${MAC_SIGN_IDENTITY:-}" && -n "${MAC_NOTARY_APPLE_ID:-}" && -n "${MAC_NOTARY_TEAM_ID:-}" && -n "${MAC_NOTARY_PASSWORD:-}" ]]; then
+            notarize_args=(
+              --mac-notarize
+              --mac-sign-identity "$MAC_SIGN_IDENTITY"
+              --mac-notary-apple-id "$MAC_NOTARY_APPLE_ID"
+              --mac-notary-team-id "$MAC_NOTARY_TEAM_ID"
+              --mac-notary-password "$MAC_NOTARY_PASSWORD"
+            )
+          fi
+
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type dmg --output "$dmg_base" --app-name "$APP_NAME" "${notarize_args[@]}"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app --output "$app_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-dmg --output "$app_base" --app-name "$APP_NAME" --app-version "$version" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
+
+      - name: Upload macOS release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/macos/*
+          fail_on_unmatched_files: true
