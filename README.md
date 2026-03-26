@@ -4,6 +4,8 @@ Create installers and archives from a release folder for any target OS.
 
 Give it a folder, pick a target platform and format, and it produces the package - zip, tar.gz, deb, rpm, AppImage, Flatpak, Snap, NSIS installer, DMG, a macOS .app bundle, a PKG installer, a DMG containing a .app bundle, or a PKG containing a .app bundle.
 
+**WARNING**: This project is in early development. The API and generated outputs are not stable yet, and there may be bugs. Use with caution and please report any issues you encounter.
+
 ## Supported targets
 
 | OS      | Types                                              |
