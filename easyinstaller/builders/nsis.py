@@ -83,8 +83,8 @@ _NSIS_TEMPLATE = r"""!include "MUI2.nsh"
 
 Name "{app_name}"
 OutFile "{output_file}"
-InstallDir "$PROGRAMFILES\{install_name}"
-RequestExecutionLevel admin
+InstallDir "$LOCALAPPDATA\Programs\{install_name}"
+RequestExecutionLevel user
 SilentInstall normal
 SilentUnInstall normal
 
@@ -99,19 +99,21 @@ SilentUnInstall normal
 Section "Install"
 {install_files}
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+    SetShellVarContext current
     CreateDirectory "$SMPROGRAMS\{install_name}"
     CreateShortcut "$SMPROGRAMS\{install_name}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "DisplayName" "{app_name}"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "UninstallString" "$INSTDIR\Uninstall.exe"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "DisplayVersion" "{app_version}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "DisplayName" "{app_name}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "UninstallString" "$INSTDIR\Uninstall.exe"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}" "DisplayVersion" "{app_version}"
 SectionEnd
 
 Section "Uninstall"
 {uninstall_files}
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
+    SetShellVarContext current
     Delete "$SMPROGRAMS\{install_name}\Uninstall.lnk"
     RMDir "$SMPROGRAMS\{install_name}"
-    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}"
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}"
 SectionEnd
 """
