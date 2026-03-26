@@ -34,7 +34,7 @@ def build_app_in_pkg(cfg: Config) -> str:
             app_path,
             output_file,
             "/Applications",
-            _bundle_identifier(cfg.app_name) + ".pkg",
+            _bundle_identifier(cfg.app_name, ".app.pkg"),
             cfg.app_version,
             cfg,
         )

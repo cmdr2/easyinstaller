@@ -182,10 +182,10 @@ def _create_pkg_from_component(
     return output_file
 
 
-def _bundle_identifier(app_name: str) -> str:
+def _bundle_identifier(app_name: str, suffix: str = ".app") -> str:
     import re
 
-    return "com." + re.sub(r"[^a-z0-9]", "", app_name.lower()) + ".app"
+    return "com." + re.sub(r"[^a-z0-9]", "", app_name.lower()) + suffix
 
 
 def _create_app_bundle(cfg: Config, source_dir: str, output_file: str) -> str:

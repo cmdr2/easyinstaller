@@ -32,6 +32,12 @@ class TestBuildAppInPkg:
         assert result.endswith(".pkg")
         assert any(
             call["args"][:2] == ["pkgbuild", "--component"]
+            and "--identifier" in call["args"]
+            and call["args"][call["args"].index("--identifier") + 1] == "com.testapp.app.pkg"
+            for call in calls
+        )
+        assert any(
+            call["args"][:2] == ["pkgbuild", "--component"]
             and call["args"][-1] == result
             and "/Applications" in call["args"]
             for call in calls

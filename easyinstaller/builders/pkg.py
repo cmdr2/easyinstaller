@@ -45,7 +45,7 @@ def _stage_pkg_root(source: str, cfg: Config, temp_root: str) -> str:
 
 def build_pkg(cfg: Config) -> str:
     output_file = cfg.output + ".pkg"
-    identifier = _bundle_identifier(cfg.app_name) + ".pkg"
+    identifier = _bundle_identifier(cfg.app_name, ".pkg")
     log.info("Creating PKG: %s", output_file)
 
     temp_root = tempfile.mkdtemp(prefix="easyinstaller-pkg-")
