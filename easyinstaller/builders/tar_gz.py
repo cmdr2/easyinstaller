@@ -13,7 +13,8 @@ from .mac_support import _finalize_mac_output, _prepare_mac_source
 
 def _build_tar_gz_from_source(source: str, output_file: str) -> str:
     with tarfile.open(output_file, "w:gz") as tf:
-        tf.add(source, arcname=os.path.basename(source))
+        for entry in sorted(os.listdir(source)):
+            tf.add(os.path.join(source, entry), arcname=entry)
     return output_file
 
 

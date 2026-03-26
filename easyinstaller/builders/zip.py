@@ -12,15 +12,15 @@ from .mac_support import _finalize_mac_output, _prepare_mac_source
 
 
 def _build_zip_from_source(source: str, output_file: str) -> str:
-    base_name = os.path.basename(source)
     with zipfile.ZipFile(output_file, "w", zipfile.ZIP_DEFLATED) as zf:
         for dirpath, dirnames, filenames in os.walk(source):
             if not filenames and not dirnames:
-                arc_dir = os.path.join(base_name, os.path.relpath(dirpath, source)) + "/"
-                zf.writestr(zipfile.ZipInfo(arc_dir), "")
+                rel = os.path.relpath(dirpath, source)
+                if rel != ".":
+                    zf.writestr(zipfile.ZipInfo(rel + "/"), "")
             for filename in filenames:
                 abs_path = os.path.join(dirpath, filename)
-                arc_name = os.path.join(base_name, os.path.relpath(abs_path, source))
+                arc_name = os.path.relpath(abs_path, source)
                 zf.write(abs_path, arc_name)
     return output_file
 

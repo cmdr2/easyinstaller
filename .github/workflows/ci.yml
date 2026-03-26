@@ -463,8 +463,8 @@ jobs:
             if [[ "$pkg_signing_enabled" != "true" ]]; then
               return 0
             fi
-            pkgutil --check-signature "$package_path"
-            spctl --assess --verbose=4 --type install "$package_path"
+            pkgutil --check-signature "$package_path" > /dev/null
+            spctl --assess --type install "$package_path"
           }
 
           assert_file_exists() {
