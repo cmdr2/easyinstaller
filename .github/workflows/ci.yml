@@ -108,11 +108,11 @@ jobs:
 
           Remove-Item -Recurse -Force $zipExtract, $tarExtract, $nsisInstall -ErrorAction SilentlyContinue
           Expand-Archive -Path (Join-Path $env:OUTPUT_DIR 'demo-app-windows-x64.zip') -DestinationPath $zipExtract
-          Invoke-DemoBinary (Join-Path $zipExtract $packageRoot $env:APP_EXECUTABLE)
+          Invoke-DemoBinary (Join-Path $zipExtract $env:APP_EXECUTABLE)
 
           New-Item -ItemType Directory -Path $tarExtract | Out-Null
           tar -xzf (Join-Path $env:OUTPUT_DIR 'demo-app-windows-x64.tar.gz') -C $tarExtract
-          Invoke-DemoBinary (Join-Path $tarExtract $packageRoot $env:APP_EXECUTABLE)
+          Invoke-DemoBinary (Join-Path $tarExtract $env:APP_EXECUTABLE)
 
           New-Item -ItemType Directory -Path $nsisInstall | Out-Null
           $installer = Join-Path $env:OUTPUT_DIR 'demo-app-windows-x64-setup.exe'
@@ -231,11 +231,11 @@ jobs:
 
           rm -rf "$zip_extract" "$targz_extract"
           unzip -q "$OUTPUT_DIR/demo-app-linux-x64.zip" -d "$zip_extract"
-          run_demo "$zip_extract/$package_root/$APP_BINARY_NAME"
+          run_demo "$zip_extract/$APP_BINARY_NAME"
 
           mkdir -p "$targz_extract"
           tar -xzf "$OUTPUT_DIR/demo-app-linux-x64.tar.gz" -C "$targz_extract"
-          run_demo "$targz_extract/$package_root/$APP_BINARY_NAME"
+          run_demo "$targz_extract/$APP_BINARY_NAME"
 
           sudo dpkg -i "$OUTPUT_DIR/demo-app-linux-x64.deb"
           run_demo "/usr/bin/$APP_BINARY_NAME"
@@ -557,13 +557,13 @@ jobs:
           rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount" "$dmg_extract" "$app_dmg_extract" "$pkg_install_root" "$app_pkg_install_root"
           rm -f "$pkg_launcher_path"
           unzip -q "$OUTPUT_DIR/demo-app-macos-arm64.zip" -d "$zip_extract"
-          verify_signed_binary "$zip_extract/$package_root/$APP_EXECUTABLE"
-          run_demo "$zip_extract/$package_root/$APP_EXECUTABLE"
+          verify_signed_binary "$zip_extract/$APP_EXECUTABLE"
+          run_demo "$zip_extract/$APP_EXECUTABLE"
 
           mkdir -p "$targz_extract"
           tar -xzf "$OUTPUT_DIR/demo-app-macos-arm64.tar.gz" -C "$targz_extract"
-          verify_signed_binary "$targz_extract/$package_root/$APP_EXECUTABLE"
-          run_demo "$targz_extract/$package_root/$APP_EXECUTABLE"
+          verify_signed_binary "$targz_extract/$APP_EXECUTABLE"
+          run_demo "$targz_extract/$APP_EXECUTABLE"
 
           mkdir -p "$dmg_mount"
           validate_stapled_ticket "$OUTPUT_DIR/demo-app-macos-arm64-files.dmg" "$app_signing_enabled"
