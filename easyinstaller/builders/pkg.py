@@ -50,11 +50,10 @@ def build_pkg(cfg: Config) -> str:
 
     temp_root = tempfile.mkdtemp(prefix="easyinstaller-pkg-")
     signed_source_root = None
-    source = cfg.source
     if cfg.mac_notarize:
-        signed_source_root, source = _prepare_mac_source(cfg, "easyinstaller-pkg-src-")
+        signed_source_root = _prepare_mac_source(cfg, "easyinstaller-pkg-src-")
     try:
-        staged_root = _stage_pkg_root(source, cfg, temp_root)
+        staged_root = _stage_pkg_root(signed_source_root or cfg.source, cfg, temp_root)
         result = _create_pkg_from_root(staged_root, output_file, "/", identifier, cfg.app_version, cfg)
     finally:
         if signed_source_root is not None:

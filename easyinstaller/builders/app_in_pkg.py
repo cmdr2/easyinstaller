@@ -25,11 +25,10 @@ def build_app_in_pkg(cfg: Config) -> str:
 
     temp_root = tempfile.mkdtemp(prefix="easyinstaller-app-in-pkg-")
     signed_source_root = None
-    source = cfg.source
     if cfg.mac_notarize:
-        signed_source_root, source = _prepare_mac_source(cfg, "easyinstaller-app-in-pkg-src-")
+        signed_source_root = _prepare_mac_source(cfg, "easyinstaller-app-in-pkg-src-")
     try:
-        app_path = _create_app_bundle(cfg, source, f"{temp_root}/{cfg.app_name}.app")
+        app_path = _create_app_bundle(cfg, signed_source_root or cfg.source, f"{temp_root}/{cfg.app_name}.app")
         result = _create_pkg_from_component(
             app_path,
             output_file,

@@ -86,7 +86,6 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $packageRoot = Split-Path -Leaf $env:RELEASE_DIR
 
           function Invoke-DemoBinary([string]$binaryPath) {
             if (-not (Test-Path $binaryPath)) {
@@ -211,7 +210,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          package_root="$(basename "$RELEASE_DIR")"
           zip_extract="$RUNNER_TEMP/linux-zip"
           targz_extract="$RUNNER_TEMP/linux-targz"
 
@@ -415,7 +413,6 @@ jobs:
 
           app_signing_enabled="${{ steps.check-signing.outputs.app_notarization_enabled }}"
           pkg_signing_enabled="${{ steps.check-signing.outputs.pkg_notarization_enabled }}"
-          package_root="$(basename "$RELEASE_DIR")"
           zip_extract="$RUNNER_TEMP/macos-zip"
           targz_extract="$RUNNER_TEMP/macos-targz"
           dmg_mount="$RUNNER_TEMP/macos-dmg-mount"
@@ -525,18 +522,6 @@ jobs:
             fi
           }
 
-          find_dmg_binary() {
-            if [[ -x "$1/$APP_EXECUTABLE" ]]; then
-              printf '%s\n' "$1/$APP_EXECUTABLE"
-              return 0
-            fi
-            if [[ -x "$1/$package_root/$APP_EXECUTABLE" ]]; then
-              printf '%s\n' "$1/$package_root/$APP_EXECUTABLE"
-              return 0
-            fi
-            return 1
-          }
-
           copy_mount_contents() {
             local mount_path="$1"
             local destination_path="$2"
@@ -570,8 +555,8 @@ jobs:
           hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-app-macos-arm64-files.dmg"
           copy_mount_contents "$dmg_mount" "$dmg_extract"
           hdiutil detach "$dmg_mount"
-          verify_signed_binary "$(find_dmg_binary "$dmg_extract")"
-          run_demo "$(find_dmg_binary "$dmg_extract")"
+          verify_signed_binary "$dmg_extract/$APP_EXECUTABLE"
+          run_demo "$dmg_extract/$APP_EXECUTABLE"
 
           mkdir -p "$app_dmg_mount"
           validate_stapled_ticket "$OUTPUT_DIR/demo-app-macos-arm64.dmg" "$app_signing_enabled"

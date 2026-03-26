@@ -23,11 +23,10 @@ def build_tar_gz(cfg: Config) -> str:
     log.info("Creating tar.gz archive: %s", output_file)
 
     temp_root = None
-    source = cfg.source
     if cfg.target_os == "mac" and cfg.mac_notarize:
-        temp_root, source = _prepare_mac_source(cfg, "easyinstaller-mac-targz-")
+        temp_root = _prepare_mac_source(cfg, "easyinstaller-mac-targz-")
     try:
-        result = _build_tar_gz_from_source(source, output_file)
+        result = _build_tar_gz_from_source(temp_root or cfg.source, output_file)
     finally:
         if temp_root is not None:
             shutil.rmtree(temp_root, ignore_errors=True)

@@ -19,12 +19,11 @@ def build_app_in_dmg(cfg: Config) -> str:
 
     temp_root = tempfile.mkdtemp(prefix="easyinstaller-app-in-dmg-")
     signed_source_root = None
-    source = cfg.source
     if cfg.mac_notarize:
-        signed_source_root, source = _prepare_mac_source(cfg, "easyinstaller-app-in-dmg-src-")
+        signed_source_root = _prepare_mac_source(cfg, "easyinstaller-app-in-dmg-src-")
     try:
         app_path = os.path.join(temp_root, f"{cfg.app_name}.app")
-        _create_app_bundle(cfg, source, app_path)
+        _create_app_bundle(cfg, signed_source_root or cfg.source, app_path)
         _create_dmg_image(temp_root, dmg_output, cfg.app_name)
     finally:
         if signed_source_root is not None:

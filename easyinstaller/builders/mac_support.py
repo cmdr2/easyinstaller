@@ -93,18 +93,17 @@ def _run_quiet(args: list[str]) -> None:
         raise RuntimeError(_summarise_command_failure(exc)) from exc
 
 
-def _prepare_mac_source(cfg: Config, prefix: str) -> tuple[str, str]:
+def _prepare_mac_source(cfg: Config, prefix: str) -> str:
     temp_root = tempfile.mkdtemp(prefix=prefix)
-    source_copy = os.path.join(temp_root, os.path.basename(cfg.source))
-    shutil.copytree(cfg.source, source_copy)
+    shutil.copytree(cfg.source, temp_root, dirs_exist_ok=True)
 
     if cfg.mac_notarize:
         _require("codesign")
         _require("xcrun")
-        for path in _iter_signable_paths(source_copy):
+        for path in _iter_signable_paths(temp_root):
             _codesign_path(path, cfg)
 
-    return temp_root, source_copy
+    return temp_root
 
 
 def _submit_for_notarization(target: str, cfg: Config) -> None:

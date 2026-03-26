@@ -7,7 +7,7 @@ import pytest
 from easyinstaller.builders import build_dmg
 
 from tests.conftest import base_cfg
-from tests_integration.conftest import assert_contains_any, mount_dmg, require_commands, require_host_os, unmount_dmg
+from tests_integration.conftest import mount_dmg, require_commands, require_host_os, unmount_dmg
 
 
 pytestmark = pytest.mark.integration
@@ -25,8 +25,7 @@ class TestDmgIntegration:
 
         mount_dmg(result, mount_path)
         try:
-            source_name = Path(source_dir).name
-            assert_contains_any(mount_path, [Path("hello.txt"), Path(source_name) / "hello.txt"])
-            assert_contains_any(mount_path, [Path("subdir") / "nested.txt", Path(source_name) / "subdir" / "nested.txt"])
+            assert (mount_path / "hello.txt").is_file()
+            assert (mount_path / "subdir" / "nested.txt").is_file()
         finally:
             unmount_dmg(mount_path)

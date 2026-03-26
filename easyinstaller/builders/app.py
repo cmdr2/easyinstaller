@@ -14,11 +14,10 @@ def build_app(cfg: Config) -> str:
     log.info("Creating .app bundle: %s", output_file)
 
     temp_root = None
-    source = cfg.source
     if cfg.mac_notarize:
-        temp_root, source = _prepare_mac_source(cfg, "easyinstaller-mac-app-src-")
+        temp_root = _prepare_mac_source(cfg, "easyinstaller-mac-app-src-")
     try:
-        result = _create_app_bundle(cfg, source, output_file)
+        result = _create_app_bundle(cfg, temp_root or cfg.source, output_file)
     finally:
         if temp_root is not None:
             shutil.rmtree(temp_root, ignore_errors=True)
