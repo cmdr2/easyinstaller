@@ -34,7 +34,7 @@ Building installers for:
 - [Linux](docs/linux.md)
 - [macOS](docs/mac.md)
 
-See [release-example.yml](.github/workflows/release-example.yml) for a minimal GitHub Actions workflow that builds the demo app project for Windows, Linux, and macOS, and releases installers for it.
+See [ci.yml](.github/workflows/ci.yml) for a minimal GitHub Actions workflow that builds the demo app project for Windows, Linux, and macOS, and releases installers for it.
 
 ### Examples
 
