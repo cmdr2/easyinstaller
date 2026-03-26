@@ -8,15 +8,33 @@ from tests.conftest import base_cfg
 
 
 class TestBuildPkg:
-    def test_uses_productbuild_with_root_install(self, source_dir, output_path, command_spy):
+    @staticmethod
+    def _write_synthesized_distribution(args) -> None:
+        if args[:2] != ["productbuild", "--synthesize"]:
+            return
+        Path(args[-1]).write_text(
+            '<?xml version="1.0" encoding="utf-8"?>\n'
+            '<installer-gui-script minSpecVersion="1">\n'
+            '    <pkg-ref id="com.test.pkg"/>\n'
+            '    <options customize="never" require-scripts="false"/>\n'
+            "    <choices-outline>\n"
+            '        <line choice="default"/>\n'
+            "    </choices-outline>\n"
+            '    <choice id="default"/>\n'
+            '    <pkg-ref id="com.test.pkg" version="1.0.0">component.pkg</pkg-ref>\n'
+            "</installer-gui-script>\n"
+        )
+
+    def test_wraps_pkgbuild_root_with_productbuild(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
 
         staged_root_has_payload: list[bool] = []
 
         def inspect_pkg_root(args, _kwargs):
-            if args[:2] == ["productbuild", "--product"]:
-                staged_root = Path(args[8])
+            if args[:2] == ["pkgbuild", "--root"]:
+                staged_root = Path(args[2])
                 staged_root_has_payload.append((staged_root / "opt" / "test-app" / "hello.txt").is_file())
+            self._write_synthesized_distribution(args)
 
         patch_run("easyinstaller.builders.mac_support", side_effect=inspect_pkg_root)
 
@@ -34,14 +52,16 @@ class TestBuildPkg:
         assert result.endswith(".pkg")
         assert staged_root_has_payload == [True]
         assert any(
-            call["args"][:2] == ["productbuild", "--product"]
+            call["args"][:2] == ["pkgbuild", "--root"]
             and "--identifier" in call["args"]
             and call["args"][call["args"].index("--identifier") + 1] == "com.testapp.pkg"
             for call in calls
         )
         assert any(
-            call["args"][:2] == ["productbuild", "--product"] and call["args"][-1] == result and "/" in call["args"]
-            for call in calls
+            call["args"][:2] == ["productbuild", "--synthesize"] and "--package" in call["args"] for call in calls
+        )
+        assert any(
+            call["args"][:2] == ["productbuild", "--distribution"] and call["args"][-1] == result for call in calls
         )
 
     def test_pkg_adds_launcher_when_app_exec_is_set(self, source_dir, output_path, command_spy):
@@ -50,9 +70,10 @@ class TestBuildPkg:
         launcher_text: list[str] = []
 
         def inspect_pkg_root(args, _kwargs):
-            if args[:2] == ["productbuild", "--product"]:
-                launcher_path = Path(args[8]) / "usr" / "local" / "bin" / "myapp"
+            if args[:2] == ["pkgbuild", "--root"]:
+                launcher_path = Path(args[2]) / "usr" / "local" / "bin" / "myapp"
                 launcher_text.append(launcher_path.read_text())
+            self._write_synthesized_distribution(args)
 
         patch_run("easyinstaller.builders.mac_support", side_effect=inspect_pkg_root)
 
@@ -74,7 +95,11 @@ class TestBuildPkg:
 
     def test_notarized_pkg_signs_payload_and_installer(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
-        patch_run("easyinstaller.builders.mac_support")
+
+        def inspect_pkg_root(args, _kwargs):
+            self._write_synthesized_distribution(args)
+
+        patch_run("easyinstaller.builders.mac_support", side_effect=inspect_pkg_root)
 
         cfg = base_cfg(
             source_dir,
@@ -98,7 +123,7 @@ class TestBuildPkg:
             for call in calls
         )
         assert any(
-            call["args"][:2] == ["productbuild", "--product"]
+            call["args"][:2] == ["productbuild", "--distribution"]
             and "--sign" in call["args"]
             and "Developer ID Installer: Example, Inc. (TEAMID1234)" in call["args"]
             for call in calls

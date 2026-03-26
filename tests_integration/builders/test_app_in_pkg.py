@@ -18,7 +18,7 @@ pytestmark = pytest.mark.integration
 class TestAppInPkgIntegration:
     def test_builds_app_in_pkg_and_installs_app_bundle(self, source_dir, tmp_path):
         require_host_os("mac")
-        require_commands("productbuild", "installer")
+        require_commands("pkgbuild", "productbuild", "installer")
 
         app_name = "TestAppInPkg"
         installed_app = Path.home() / "Applications" / f"{app_name}.app"

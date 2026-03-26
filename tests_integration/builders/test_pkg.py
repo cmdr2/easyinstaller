@@ -18,7 +18,7 @@ pytestmark = pytest.mark.integration
 class TestPkgIntegration:
     def test_builds_pkg_and_installs_release_tree(self, source_dir, tmp_path):
         require_host_os("mac")
-        require_commands("productbuild", "installer")
+        require_commands("pkgbuild", "productbuild", "installer")
 
         app_name = "TestPkgInstall"
         installed_root = Path.home() / "opt" / _sanitise_name(app_name)

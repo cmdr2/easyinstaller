@@ -8,6 +8,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 from pathlib import PurePosixPath
 
 from ..config import Config
@@ -133,6 +134,69 @@ def _write_product_requirements() -> str:
     return handle.name
 
 
+def _enable_home_install_domain(distribution_path: str) -> None:
+    tree = ET.parse(distribution_path)
+    root = tree.getroot()
+
+    domains = root.find("domains")
+    if domains is None:
+        domains = ET.Element("domains")
+        children = list(root)
+        insert_at = 0
+        for index, child in enumerate(children):
+            if child.tag != "pkg-ref":
+                insert_at = index
+                break
+            insert_at = index + 1
+        root.insert(insert_at, domains)
+
+    domains.set("enable_anywhere", "false")
+    domains.set("enable_currentUserHome", "true")
+    domains.set("enable_localSystem", "true")
+
+    tree.write(distribution_path, encoding="utf-8", xml_declaration=True)
+
+
+def _build_product_archive(component_pkg: str, output_file: str, cfg: Config | None = None) -> str:
+    _require("productbuild")
+    if os.path.exists(output_file):
+        os.remove(output_file)
+
+    requirements_path = _write_product_requirements()
+    distribution_path = os.path.join(os.path.dirname(component_pkg), "Distribution")
+    try:
+        _run(
+            [
+                "productbuild",
+                "--synthesize",
+                "--product",
+                requirements_path,
+                "--package",
+                component_pkg,
+                distribution_path,
+            ]
+        )
+        _enable_home_install_domain(distribution_path)
+
+        args = [
+            "productbuild",
+            "--distribution",
+            distribution_path,
+            "--package-path",
+            os.path.dirname(component_pkg),
+        ]
+        if cfg is not None and cfg.mac_notarize:
+            args.extend(["--sign", _mac_installer_sign_identity(cfg)])
+        args.append(output_file)
+        _run(args)
+    finally:
+        os.unlink(requirements_path)
+        if os.path.exists(distribution_path):
+            os.unlink(distribution_path)
+
+    return output_file
+
+
 def _create_dmg_image(source: str, output_file: str, volume_name: str) -> str:
     _require("hdiutil")
     _run(["hdiutil", "create", "-volname", volume_name, "-srcfolder", source, "-ov", "-format", "UDZO", output_file])
@@ -147,30 +211,26 @@ def _create_pkg_from_root(
     version: str,
     cfg: Config | None = None,
 ) -> str:
-    _require("productbuild")
-    if os.path.exists(output_file):
-        os.remove(output_file)
-    requirements_path = _write_product_requirements()
+    _require("pkgbuild")
+    component_pkg = os.path.join(os.path.dirname(output_file), f"{identifier}.component.pkg")
     try:
         args = [
-            "productbuild",
-            "--product",
-            requirements_path,
+            "pkgbuild",
+            "--root",
+            source,
             "--identifier",
             identifier,
             "--version",
             version,
-            "--root",
-            source,
+            "--install-location",
             install_location,
+            component_pkg,
         ]
-        if cfg is not None and cfg.mac_notarize:
-            args.extend(["--sign", _mac_installer_sign_identity(cfg)])
-        args.append(output_file)
         _run(args)
+        return _build_product_archive(component_pkg, output_file, cfg)
     finally:
-        os.unlink(requirements_path)
-    return output_file
+        if os.path.exists(component_pkg):
+            os.unlink(component_pkg)
 
 
 def _create_pkg_from_component(
@@ -181,30 +241,26 @@ def _create_pkg_from_component(
     version: str,
     cfg: Config | None = None,
 ) -> str:
-    _require("productbuild")
-    if os.path.exists(output_file):
-        os.remove(output_file)
-    requirements_path = _write_product_requirements()
+    _require("pkgbuild")
+    component_pkg = os.path.join(os.path.dirname(output_file), f"{identifier}.component.pkg")
     try:
         args = [
-            "productbuild",
-            "--product",
-            requirements_path,
+            "pkgbuild",
+            "--component",
+            component_path,
             "--identifier",
             identifier,
             "--version",
             version,
-            "--component",
-            component_path,
+            "--install-location",
             install_location,
+            component_pkg,
         ]
-        if cfg is not None and cfg.mac_notarize:
-            args.extend(["--sign", _mac_installer_sign_identity(cfg)])
-        args.append(output_file)
         _run(args)
+        return _build_product_archive(component_pkg, output_file, cfg)
     finally:
-        os.unlink(requirements_path)
-    return output_file
+        if os.path.exists(component_pkg):
+            os.unlink(component_pkg)
 
 
 def _bundle_identifier(app_name: str, suffix: str = ".app") -> str:

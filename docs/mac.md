@@ -44,7 +44,7 @@ For a plain `pkg`, easyinstaller uses system-tool style packaging rather than ap
 
 - The payload is installed under `/opt/my-app` where `my-app` is a sanitised form of `--app-name`.
 - If you pass `--app-exec`, easyinstaller also installs a small launcher script at `/usr/local/bin/<basename(app-exec)>` that runs the packaged executable from `/opt/my-app/...`.
-- The generated product archive enables user-home installation in macOS Installer, so a non-admin install can target `~/opt/my-app` and `~/usr/local/bin/<executable>`.
+- The generated product archive explicitly enables the current-user home domain in macOS Installer, so a non-admin install can target `~/opt/my-app` and `~/usr/local/bin/<executable>`.
 - If you install with `installer -target CurrentUserHomeDirectory`, those become `~/opt/my-app` and `~/usr/local/bin/<executable>`.
 
 This keeps plain `pkg` useful for CLI and non-bundle tools. If you want Finder-first UX, use `app`, `app-in-dmg`, or `app-in-pkg` instead.
@@ -55,7 +55,7 @@ Run: `easyinstaller --source ./build --os mac --arch arm64 --type app-in-pkg --o
 
 `MyApp.pkg` will be written in the current directory.
 
-The installed app bundle goes under `Applications/My App.app` on the target volume, or `~/Applications/My App.app` when installed into the user home domain. The generated product archive enables that per-user install path so it can be installed without admin permissions.
+The installed app bundle goes under `Applications/My App.app` on the target volume, or `~/Applications/My App.app` when installed into the user home domain. The generated product archive explicitly enables that per-user install path so it can be installed without admin permissions.
 
 ## Notarization
 

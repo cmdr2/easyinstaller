@@ -96,7 +96,7 @@ Other formats require the corresponding tool to be installed on the build machin
 | `flatpak`  | `flatpak`, `flatpak-builder` |
 | `snap`     | `snapcraft`       |
 | `dmg`      | `hdiutil` (macOS) |
-| `pkg`, `app-in-pkg` | `productbuild` (macOS) |
+| `pkg`, `app-in-pkg` | `pkgbuild`, `productbuild` (macOS) |
 | mac notarization | `codesign`, `xcrun notarytool`, `xcrun stapler` (macOS) |
 
 ## Running tests
