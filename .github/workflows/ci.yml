@@ -75,8 +75,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          archive_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64"
-          nsis_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64-setup"
+          archive_base="$OUTPUT_DIR/demo-app-windows-x64"
+          nsis_base="$OUTPUT_DIR/demo-app-windows-x64-setup"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
@@ -107,15 +107,15 @@ jobs:
           $nsisInstall = Join-Path $env:RUNNER_TEMP 'windows-nsis'
 
           Remove-Item -Recurse -Force $zipExtract, $tarExtract, $nsisInstall -ErrorAction SilentlyContinue
-          Expand-Archive -Path (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64.zip') -DestinationPath $zipExtract
+          Expand-Archive -Path (Join-Path $env:OUTPUT_DIR 'demo-app-windows-x64.zip') -DestinationPath $zipExtract
           Invoke-DemoBinary (Join-Path $zipExtract $packageRoot $env:APP_EXECUTABLE)
 
           New-Item -ItemType Directory -Path $tarExtract | Out-Null
-          tar -xzf (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64.tar.gz') -C $tarExtract
+          tar -xzf (Join-Path $env:OUTPUT_DIR 'demo-app-windows-x64.tar.gz') -C $tarExtract
           Invoke-DemoBinary (Join-Path $tarExtract $packageRoot $env:APP_EXECUTABLE)
 
           New-Item -ItemType Directory -Path $nsisInstall | Out-Null
-          $installer = Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64-setup.exe'
+          $installer = Join-Path $env:OUTPUT_DIR 'demo-app-windows-x64-setup.exe'
           $arguments = @('/S', "/D=$nsisInstall")
           $process = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru
           if ($process.ExitCode -ne 0) {
@@ -196,7 +196,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          base="$OUTPUT_DIR/demo-easyinstaller-linux-x64"
+          base="$OUTPUT_DIR/demo-app-linux-x64"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$base"
@@ -230,34 +230,34 @@ jobs:
           }
 
           rm -rf "$zip_extract" "$targz_extract"
-          unzip -q "$OUTPUT_DIR/demo-easyinstaller-linux-x64.zip" -d "$zip_extract"
+          unzip -q "$OUTPUT_DIR/demo-app-linux-x64.zip" -d "$zip_extract"
           run_demo "$zip_extract/$package_root/$APP_BINARY_NAME"
 
           mkdir -p "$targz_extract"
-          tar -xzf "$OUTPUT_DIR/demo-easyinstaller-linux-x64.tar.gz" -C "$targz_extract"
+          tar -xzf "$OUTPUT_DIR/demo-app-linux-x64.tar.gz" -C "$targz_extract"
           run_demo "$targz_extract/$package_root/$APP_BINARY_NAME"
 
-          sudo dpkg -i "$OUTPUT_DIR/demo-easyinstaller-linux-x64.deb"
+          sudo dpkg -i "$OUTPUT_DIR/demo-app-linux-x64.deb"
           run_demo "/usr/bin/$APP_BINARY_NAME"
           sudo dpkg -r "$PACKAGE_NAME"
 
-          rpm -qip "$OUTPUT_DIR/demo-easyinstaller-linux-x64.rpm"
-          rpm -qlp "$OUTPUT_DIR/demo-easyinstaller-linux-x64.rpm" | grep -F "/opt/$PACKAGE_NAME/$APP_BINARY_NAME"
+          rpm -qip "$OUTPUT_DIR/demo-app-linux-x64.rpm"
+          rpm -qlp "$OUTPUT_DIR/demo-app-linux-x64.rpm" | grep -F "/opt/$PACKAGE_NAME/$APP_BINARY_NAME"
           docker run --rm \
             -v "$GITHUB_WORKSPACE/$OUTPUT_DIR:/packages:ro" \
             "$RPM_TEST_IMAGE" \
-            bash -lc "set -euo pipefail && dnf install -y /packages/demo-easyinstaller-linux-x64.rpm && output=\$(/opt/$PACKAGE_NAME/$APP_BINARY_NAME --headless) && [[ \$output == *'Hello easyinstaller'* ]] && dnf remove -y $PACKAGE_NAME"
+            bash -lc "set -euo pipefail && dnf install -y /packages/demo-app-linux-x64.rpm && output=\$(/opt/$PACKAGE_NAME/$APP_BINARY_NAME --headless) && [[ \$output == *'Hello easyinstaller'* ]] && dnf remove -y $PACKAGE_NAME"
 
-          chmod +x "$OUTPUT_DIR/demo-easyinstaller-linux-x64.AppImage"
-          appimage_output="$("$OUTPUT_DIR/demo-easyinstaller-linux-x64.AppImage" --appimage-extract-and-run --headless)"
+          chmod +x "$OUTPUT_DIR/demo-app-linux-x64.AppImage"
+          appimage_output="$("$OUTPUT_DIR/demo-app-linux-x64.AppImage" --appimage-extract-and-run --headless)"
           [[ "$appimage_output" == *"Hello easyinstaller"* ]]
 
-          flatpak install --user -y "$OUTPUT_DIR/demo-easyinstaller-linux-x64.flatpak"
+          flatpak install --user -y "$OUTPUT_DIR/demo-app-linux-x64.flatpak"
           flatpak_output="$(flatpak run "$FLATPAK_APP_ID" --headless)"
           [[ "$flatpak_output" == *"Hello easyinstaller"* ]]
           flatpak uninstall --user -y "$FLATPAK_APP_ID"
 
-          sudo snap install --dangerous "$OUTPUT_DIR/demo-easyinstaller-linux-x64.snap"
+          sudo snap install --dangerous "$OUTPUT_DIR/demo-app-linux-x64.snap"
           snap_output="$(/snap/bin/$PACKAGE_NAME --headless)"
           [[ "$snap_output" == *"Hello easyinstaller"* ]]
           sudo snap remove "$PACKAGE_NAME"
@@ -373,11 +373,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          archive_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
-          dmg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files"
-          app_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
-          pkg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files"
-          app_pkg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer"
+          archive_base="$OUTPUT_DIR/demo-app-macos-arm64"
+          dmg_base="$OUTPUT_DIR/demo-app-macos-arm64-files"
+          app_base="$OUTPUT_DIR/demo-app-macos-arm64"
+          pkg_base="$OUTPUT_DIR/demo-app-macos-arm64-files"
+          app_pkg_base="$OUTPUT_DIR/demo-app-macos-arm64-installer"
           notarize_args=()
           pkg_notarize_args=()
 
@@ -556,26 +556,26 @@ jobs:
 
           rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount" "$dmg_extract" "$app_dmg_extract" "$pkg_install_root" "$app_pkg_install_root"
           rm -f "$pkg_launcher_path"
-          unzip -q "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip" -d "$zip_extract"
+          unzip -q "$OUTPUT_DIR/demo-app-macos-arm64.zip" -d "$zip_extract"
           verify_signed_binary "$zip_extract/$package_root/$APP_EXECUTABLE"
           run_demo "$zip_extract/$package_root/$APP_EXECUTABLE"
 
           mkdir -p "$targz_extract"
-          tar -xzf "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.tar.gz" -C "$targz_extract"
+          tar -xzf "$OUTPUT_DIR/demo-app-macos-arm64.tar.gz" -C "$targz_extract"
           verify_signed_binary "$targz_extract/$package_root/$APP_EXECUTABLE"
           run_demo "$targz_extract/$package_root/$APP_EXECUTABLE"
 
           mkdir -p "$dmg_mount"
-          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg" "$app_signing_enabled"
-          hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-app-macos-arm64-files.dmg" "$app_signing_enabled"
+          hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-app-macos-arm64-files.dmg"
           copy_mount_contents "$dmg_mount" "$dmg_extract"
           hdiutil detach "$dmg_mount"
           verify_signed_binary "$(find_dmg_binary "$dmg_extract")"
           run_demo "$(find_dmg_binary "$dmg_extract")"
 
           mkdir -p "$app_dmg_mount"
-          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg" "$app_signing_enabled"
-          hdiutil attach -nobrowse -readonly -mountpoint "$app_dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-app-macos-arm64.dmg" "$app_signing_enabled"
+          hdiutil attach -nobrowse -readonly -mountpoint "$app_dmg_mount" "$OUTPUT_DIR/demo-app-macos-arm64.dmg"
           mkdir -p "$app_dmg_extract"
           ditto "$app_dmg_mount/$APP_NAME.app" "$app_dmg_extract/$APP_NAME.app"
           hdiutil detach "$app_dmg_mount"
@@ -583,18 +583,18 @@ jobs:
           assess_gatekeeper_app "$app_dmg_extract/$APP_NAME.app"
           run_demo "$app_dmg_extract/$APP_NAME.app/Contents/MacOS/$APP_EXECUTABLE"
 
-          validate_pkg_signature "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
-          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg" "$pkg_signing_enabled"
-          install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
+          validate_pkg_signature "$OUTPUT_DIR/demo-app-macos-arm64-files.pkg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-app-macos-arm64-files.pkg" "$pkg_signing_enabled"
+          install_user_pkg "$OUTPUT_DIR/demo-app-macos-arm64-files.pkg"
           assert_dir_exists "$pkg_install_root"
           assert_executable_exists "$pkg_install_root/$APP_EXECUTABLE"
           assert_executable_exists "$pkg_launcher_path"
           run_demo "$pkg_install_root/$APP_EXECUTABLE"
           run_demo "$pkg_launcher_path"
 
-          validate_pkg_signature "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg"
-          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg" "$pkg_signing_enabled"
-          install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg"
+          validate_pkg_signature "$OUTPUT_DIR/demo-app-macos-arm64-installer.pkg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-app-macos-arm64-installer.pkg" "$pkg_signing_enabled"
+          install_user_pkg "$OUTPUT_DIR/demo-app-macos-arm64-installer.pkg"
           assert_dir_exists "$app_pkg_install_root"
           assert_executable_exists "$app_pkg_install_root/Contents/MacOS/$APP_EXECUTABLE"
           assert_file_exists "$app_pkg_install_root/Contents/Info.plist"
