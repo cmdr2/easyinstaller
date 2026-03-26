@@ -74,11 +74,12 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$OUTPUT_DIR"
-          archive_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64-setup"
+          archive_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64"
+          nsis_base="$OUTPUT_DIR/demo-easyinstaller-windows-x64-setup"
 
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type zip --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
-          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$archive_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type nsis --output "$nsis_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE"
 
       - name: Test Windows installers
         shell: pwsh
@@ -105,11 +106,11 @@ jobs:
           $nsisInstall = Join-Path $env:RUNNER_TEMP 'windows-nsis'
 
           Remove-Item -Recurse -Force $zipExtract, $tarExtract, $nsisInstall -ErrorAction SilentlyContinue
-          Expand-Archive -Path (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64-setup.zip') -DestinationPath $zipExtract
+          Expand-Archive -Path (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64.zip') -DestinationPath $zipExtract
           Invoke-DemoBinary (Join-Path $zipExtract $packageRoot $env:APP_EXECUTABLE)
 
           New-Item -ItemType Directory -Path $tarExtract | Out-Null
-          tar -xzf (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64-setup.tar.gz') -C $tarExtract
+          tar -xzf (Join-Path $env:OUTPUT_DIR 'demo-easyinstaller-windows-x64.tar.gz') -C $tarExtract
           Invoke-DemoBinary (Join-Path $tarExtract $packageRoot $env:APP_EXECUTABLE)
 
           New-Item -ItemType Directory -Path $nsisInstall | Out-Null
