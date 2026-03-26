@@ -13,7 +13,7 @@ class TestBuildAppInPkg:
         with pytest.raises(RuntimeError, match="app-exec is required"):
             build_app_in_pkg(cfg)
 
-    def test_uses_pkgbuild_with_component_install(self, source_dir, output_path, command_spy):
+    def test_uses_productbuild_with_component_install(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
         patch_run("easyinstaller.builders.mac_support")
 
@@ -31,13 +31,13 @@ class TestBuildAppInPkg:
 
         assert result.endswith(".pkg")
         assert any(
-            call["args"][:2] == ["pkgbuild", "--component"]
+            call["args"][:2] == ["productbuild", "--product"]
             and "--identifier" in call["args"]
             and call["args"][call["args"].index("--identifier") + 1] == "com.testapp.app.pkg"
             for call in calls
         )
         assert any(
-            call["args"][:2] == ["pkgbuild", "--component"]
+            call["args"][:2] == ["productbuild", "--product"]
             and call["args"][-1] == result
             and "/Applications" in call["args"]
             for call in calls
@@ -69,7 +69,7 @@ class TestBuildAppInPkg:
             for call in calls
         )
         assert any(
-            call["args"][:2] == ["pkgbuild", "--component"]
+            call["args"][:2] == ["productbuild", "--product"]
             and "--sign" in call["args"]
             and "Developer ID Installer: Example, Inc. (TEAMID1234)" in call["args"]
             for call in calls

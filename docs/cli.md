@@ -51,7 +51,6 @@ When notarization is enabled, easyinstaller derives `Developer ID Application: <
 | Supported Mac types | `zip`, `tar.gz`, `dmg`, `app`, `app-in-dmg`, `pkg`, `app-in-pkg` |
 | Accepted arch names | `x86_64`, `arm64`, `i386`, `armhf` |
 | Output folders | `--output dist/release/` creates `dist/release/release.<ext>` |
-| Plain `pkg` default layout | Installs payload under `/opt/<sanitised-app-name>` and, when `--app-exec` is set, adds a launcher at `/usr/local/bin/<basename(app-exec)>` |
 | Stapled mac targets | `app`, `dmg`, `app-in-dmg`, `pkg`, `app-in-pkg` |
 | Submitted but not stapled | `zip` |
 

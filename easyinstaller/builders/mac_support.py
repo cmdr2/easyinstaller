@@ -122,6 +122,17 @@ def _finalize_mac_output(cfg: Config, output_file: str) -> None:
         _staple_ticket(output_file)
 
 
+def _write_product_requirements() -> str:
+    handle = tempfile.NamedTemporaryFile(prefix="easyinstaller-product-", suffix=".plist", delete=False)
+    try:
+        with handle:
+            plistlib.dump({"home": True}, handle)
+    except Exception:
+        os.unlink(handle.name)
+        raise
+    return handle.name
+
+
 def _create_dmg_image(source: str, output_file: str, volume_name: str) -> str:
     _require("hdiutil")
     _run(["hdiutil", "create", "-volname", volume_name, "-srcfolder", source, "-ov", "-format", "UDZO", output_file])
@@ -136,22 +147,29 @@ def _create_pkg_from_root(
     version: str,
     cfg: Config | None = None,
 ) -> str:
-    _require("pkgbuild")
+    _require("productbuild")
     if os.path.exists(output_file):
         os.remove(output_file)
-    args = [
-        "pkgbuild",
-        "--root",
-        source,
-        "--identifier",
-        identifier,
-        "--version",
-        version,
-    ]
-    if cfg is not None and cfg.mac_notarize:
-        args.extend(["--sign", _mac_installer_sign_identity(cfg)])
-    args.extend(["--install-location", install_location, output_file])
-    _run(args)
+    requirements_path = _write_product_requirements()
+    try:
+        args = [
+            "productbuild",
+            "--product",
+            requirements_path,
+            "--identifier",
+            identifier,
+            "--version",
+            version,
+            "--root",
+            source,
+            install_location,
+        ]
+        if cfg is not None and cfg.mac_notarize:
+            args.extend(["--sign", _mac_installer_sign_identity(cfg)])
+        args.append(output_file)
+        _run(args)
+    finally:
+        os.unlink(requirements_path)
     return output_file
 
 
@@ -163,22 +181,29 @@ def _create_pkg_from_component(
     version: str,
     cfg: Config | None = None,
 ) -> str:
-    _require("pkgbuild")
+    _require("productbuild")
     if os.path.exists(output_file):
         os.remove(output_file)
-    args = [
-        "pkgbuild",
-        "--component",
-        component_path,
-        "--identifier",
-        identifier,
-        "--version",
-        version,
-    ]
-    if cfg is not None and cfg.mac_notarize:
-        args.extend(["--sign", _mac_installer_sign_identity(cfg)])
-    args.extend(["--install-location", install_location, output_file])
-    _run(args)
+    requirements_path = _write_product_requirements()
+    try:
+        args = [
+            "productbuild",
+            "--product",
+            requirements_path,
+            "--identifier",
+            identifier,
+            "--version",
+            version,
+            "--component",
+            component_path,
+            install_location,
+        ]
+        if cfg is not None and cfg.mac_notarize:
+            args.extend(["--sign", _mac_installer_sign_identity(cfg)])
+        args.append(output_file)
+        _run(args)
+    finally:
+        os.unlink(requirements_path)
     return output_file
 
 

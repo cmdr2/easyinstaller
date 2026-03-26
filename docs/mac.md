@@ -44,6 +44,7 @@ For a plain `pkg`, easyinstaller uses system-tool style packaging rather than ap
 
 - The payload is installed under `/opt/my-app` where `my-app` is a sanitised form of `--app-name`.
 - If you pass `--app-exec`, easyinstaller also installs a small launcher script at `/usr/local/bin/<basename(app-exec)>` that runs the packaged executable from `/opt/my-app/...`.
+- The generated product archive enables user-home installation in macOS Installer, so a non-admin install can target `~/opt/my-app` and `~/usr/local/bin/<executable>`.
 - If you install with `installer -target CurrentUserHomeDirectory`, those become `~/opt/my-app` and `~/usr/local/bin/<executable>`.
 
 This keeps plain `pkg` useful for CLI and non-bundle tools. If you want Finder-first UX, use `app`, `app-in-dmg`, or `app-in-pkg` instead.
@@ -54,7 +55,7 @@ Run: `easyinstaller --source ./build --os mac --arch arm64 --type app-in-pkg --o
 
 `MyApp.pkg` will be written in the current directory.
 
-The installed app bundle goes under `Applications/My App.app` on the target volume, or `~/Applications/My App.app` when installed with `installer -target CurrentUserHomeDirectory`.
+The installed app bundle goes under `Applications/My App.app` on the target volume, or `~/Applications/My App.app` when installed into the user home domain. The generated product archive enables that per-user install path so it can be installed without admin permissions.
 
 ## Notarization
 
@@ -97,7 +98,7 @@ Now, you can either notarize on a local Mac or set up GitHub Actions for CI nota
 
 1. Copy `developer-id-application.p12` onto the Mac. If you will notarize `pkg` or `app-in-pkg`, copy `developer-id-installer.p12` too.
 2. Import the application certificate into the login keychain by double-clicking it, or run `security import developer-id-application.p12 -k ~/Library/Keychains/login.keychain-db -P "application-p12-password" -T /usr/bin/codesign -T /usr/bin/security`.
-3. If you will notarize `pkg` or `app-in-pkg`, import the installer certificate too: `security import developer-id-installer.p12 -k ~/Library/Keychains/login.keychain-db -P "installer-p12-password" -T /usr/bin/pkgbuild -T /usr/bin/productsign -T /usr/bin/security`.
+3. If you will notarize `pkg` or `app-in-pkg`, import the installer certificate too: `security import developer-id-installer.p12 -k ~/Library/Keychains/login.keychain-db -P "installer-p12-password" -T /usr/bin/productbuild -T /usr/bin/productsign -T /usr/bin/security`.
 4. Store notarization credentials: `xcrun notarytool store-credentials easyinstaller-notary --apple-id "you@example.com" --team-id TEAMID1234 --password "app-specific-password"`.
 5. Build with notarization: `easyinstaller --source ./build --os mac --arch arm64 --type app-in-dmg --output MyApp --app-name "My App" --app-exec myapp --mac-notarize --mac-notary-team-name "Example, Inc." --mac-notary-team-id TEAMID1234 --mac-notary-keychain-profile easyinstaller-notary`.
 
@@ -144,7 +145,7 @@ Now, you can either notarize on a local Mac or set up GitHub Actions for CI nota
     security create-keychain -p "$RUNNER_TEMP" build.keychain
     security unlock-keychain -p "$RUNNER_TEMP" build.keychain
     security default-keychain -s build.keychain
-    security import app-cert-compat.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/pkgbuild -T /usr/bin/productsign
+    security import app-cert-compat.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
     if [[ -n "${{ secrets.MAC_INSTALLER_CERTIFICATE_P12_BASE64 }}" && -n "$MAC_INSTALLER_CERTIFICATE_PASSWORD" ]]; then
       printf '%s' "${{ secrets.MAC_INSTALLER_CERTIFICATE_P12_BASE64 }}" | base64 --decode > installer-cert.p12
       openssl pkcs12 -in installer-cert.p12 -passin env:MAC_INSTALLER_CERTIFICATE_PASSWORD -noout >/dev/null
@@ -154,7 +155,7 @@ Now, you can either notarize on a local Mac or set up GitHub Actions for CI nota
         -keypbe PBE-SHA1-3DES \
         -certpbe PBE-SHA1-3DES \
         -macalg sha1
-      security import installer-cert-compat.p12 -k build.keychain -P "$MAC_INSTALLER_CERTIFICATE_PASSWORD" -T /usr/bin/pkgbuild -T /usr/bin/productsign -T /usr/bin/security
+      security import installer-cert-compat.p12 -k build.keychain -P "$MAC_INSTALLER_CERTIFICATE_PASSWORD" -T /usr/bin/productbuild -T /usr/bin/productsign -T /usr/bin/security
     fi
     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
     security list-keychains -d user -s build.keychain

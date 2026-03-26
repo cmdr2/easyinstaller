@@ -342,7 +342,7 @@ jobs:
               -keypbe PBE-SHA1-3DES \
               -certpbe PBE-SHA1-3DES \
               -macalg sha1
-            security import "$prefix-compat.p12" -k build.keychain -P "$cert_password" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productsign -T /usr/bin/pkgbuild
+            security import "$prefix-compat.p12" -k build.keychain -P "$cert_password" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productsign -T /usr/bin/productbuild
           }
 
           security create-keychain -p "$RUNNER_TEMP" build.keychain

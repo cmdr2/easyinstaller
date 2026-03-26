@@ -8,14 +8,14 @@ from tests.conftest import base_cfg
 
 
 class TestBuildPkg:
-    def test_uses_pkgbuild_with_root_install(self, source_dir, output_path, command_spy):
+    def test_uses_productbuild_with_root_install(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
 
         staged_root_has_payload: list[bool] = []
 
         def inspect_pkg_root(args, _kwargs):
-            if args[:2] == ["pkgbuild", "--root"]:
-                staged_root = Path(args[2])
+            if args[:2] == ["productbuild", "--product"]:
+                staged_root = Path(args[8])
                 staged_root_has_payload.append((staged_root / "opt" / "test-app" / "hello.txt").is_file())
 
         patch_run("easyinstaller.builders.mac_support", side_effect=inspect_pkg_root)
@@ -34,13 +34,13 @@ class TestBuildPkg:
         assert result.endswith(".pkg")
         assert staged_root_has_payload == [True]
         assert any(
-            call["args"][:2] == ["pkgbuild", "--root"]
+            call["args"][:2] == ["productbuild", "--product"]
             and "--identifier" in call["args"]
             and call["args"][call["args"].index("--identifier") + 1] == "com.testapp.pkg"
             for call in calls
         )
         assert any(
-            call["args"][:2] == ["pkgbuild", "--root"] and call["args"][-1] == result and "/" in call["args"]
+            call["args"][:2] == ["productbuild", "--product"] and call["args"][-1] == result and "/" in call["args"]
             for call in calls
         )
 
@@ -50,8 +50,8 @@ class TestBuildPkg:
         launcher_text: list[str] = []
 
         def inspect_pkg_root(args, _kwargs):
-            if args[:2] == ["pkgbuild", "--root"]:
-                launcher_path = Path(args[2]) / "usr" / "local" / "bin" / "myapp"
+            if args[:2] == ["productbuild", "--product"]:
+                launcher_path = Path(args[8]) / "usr" / "local" / "bin" / "myapp"
                 launcher_text.append(launcher_path.read_text())
 
         patch_run("easyinstaller.builders.mac_support", side_effect=inspect_pkg_root)
@@ -98,7 +98,7 @@ class TestBuildPkg:
             for call in calls
         )
         assert any(
-            call["args"][:2] == ["pkgbuild", "--root"]
+            call["args"][:2] == ["productbuild", "--product"]
             and "--sign" in call["args"]
             and "Developer ID Installer: Example, Inc. (TEAMID1234)" in call["args"]
             for call in calls
