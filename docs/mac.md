@@ -85,8 +85,7 @@ Now, you can either notarize on a local Mac or set up GitHub Actions for CI nota
 - Set `MAC_NOTARY_TEAM_ID` to your Apple Developer Team ID.
 - Set `MAC_NOTARY_PASSWORD` to the app-specific password.  **DO NOT USE YOUR APPLE ID PASSWORD HERE!**
 5. Run the workflow on `macos-latest` so the signing tools are available.
-6. If you change the workflow YAML itself, start a fresh workflow run from a new commit or `workflow_dispatch`; GitHub re-runs keep the original run's `GITHUB_SHA` and `GITHUB_REF`, so a re-run will not pick up newer workflow-file changes.
-7. See the example workflow below, that will use these secrets to import the certificate and notarize the app during the build step. It will write `MyApp.dmg` in the current directory.
+6. See the example workflow below, that will use these secrets to import the certificate and notarize the app during the build step. It will write `MyApp.dmg` in the current directory.
 
 ```yaml
 - name: Import signing certificate
@@ -107,10 +106,6 @@ Now, you can either notarize on a local Mac or set up GitHub Actions for CI nota
     security import cert-compat.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
     security list-keychains -d user -s build.keychain
-```
-
-
-The step-local `env` is intentional here: it preserves the password exactly for tools like `openssl` even when the password contains shell-significant characters such as `$`, quotes, or backslashes.
 
 ```yaml
 - name: Build notarized package
@@ -124,3 +119,10 @@ The step-local `env` is intentional here: it preserves the password exactly for 
       --mac-notary-team-id "${{ secrets.MAC_NOTARY_TEAM_ID }}" \
       --mac-notary-password "${{ secrets.MAC_NOTARY_PASSWORD }}"
 ```
+
+## Local validation tips
+
+- Use `spctl --assess --type execute` for `.app` bundles. Running it against a standalone Mach-O binary commonly reports `valid but does not seem to be an app`, which is expected and does not mean the signature is bad.
+- For standalone binaries inside `zip`, `tar.gz`, or a file-only `dmg`, validate the signature with `codesign --verify --verbose=4 --strict /path/to/binary`.
+- Finder is the wrong launch path for a raw CLI executable. If you want double-click behavior on macOS, ship a `.app` bundle or a DMG containing a `.app` bundle.
+- A `.app` launched from Finder does not get an attached terminal or interactive stdin. If the program waits on `std::cin`, it can appear to do nothing. The demo app avoids that by showing a dialog for normal launches and reserving `--headless` for CLI and CI checks.

@@ -1,7 +1,10 @@
+#include <portable-file-dialogs.h>
+
 #include <iostream>
+#include <string>
 #include <string_view>
 
-#include "easyinstaller_name.h"
+#include "demo_name.hpp"
 
 int main(int argc, char* argv[]) {
     bool headless = false;
@@ -11,10 +14,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::cout << "Hello " << easyinstaller_name() << '\n';
+    const std::string greeting = std::string("Hello ") + demo_name();
+    std::cout << greeting << '\n';
     if (!headless) {
-        std::cout << "Press Enter to continue...";
-        std::cin.get();
+        pfd::message("DemoEasyInstaller", greeting, pfd::choice::ok, pfd::icon::info).result();
     }
     return 0;
 }

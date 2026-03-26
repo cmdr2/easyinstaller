@@ -1,4 +1,4 @@
-name: Release Example Packages
+name: Release Demo App Packages
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
     env:
       TARGET_OS: windows
       TARGET_ARCH: x86_64
-      RELEASE_DIR: example/release/windows-x86_64
+      RELEASE_DIR: demo_app/release/windows-x86_64
       OUTPUT_DIR: dist/windows
       APP_EXECUTABLE: demo_easyinstaller.exe
     steps:
@@ -62,13 +62,13 @@ jobs:
         run: |
           python -m pytest tests_integration -q
 
-      - name: Build example release folder
+      - name: Build demo app release folder
         shell: bash
         run: |
-          cmake -S example -B example/build/windows -DCMAKE_BUILD_TYPE=Release
-          cmake --build example/build/windows --config Release
+          cmake -S demo_app -B demo_app/build/windows -DCMAKE_BUILD_TYPE=Release
+          cmake --build demo_app/build/windows --config Release
           rm -rf "$RELEASE_DIR"
-          cmake --install example/build/windows --config Release --prefix "$RELEASE_DIR"
+          cmake --install demo_app/build/windows --config Release --prefix "$RELEASE_DIR"
 
       - name: Package Windows artifacts
         shell: bash
@@ -136,7 +136,7 @@ jobs:
     env:
       TARGET_OS: linux
       TARGET_ARCH: x86_64
-      RELEASE_DIR: example/release/linux-x86_64
+      RELEASE_DIR: demo_app/release/linux-x86_64
       OUTPUT_DIR: dist/linux
       RPM_TEST_IMAGE: fedora:43
     steps:
@@ -182,13 +182,13 @@ jobs:
         run: |
           python -m pytest tests_integration -q
 
-      - name: Build example release folder
+      - name: Build demo app release folder
         shell: bash
         run: |
-          cmake -S example -B example/build/linux -DCMAKE_BUILD_TYPE=Release
-          cmake --build example/build/linux --config Release
+          cmake -S demo_app -B demo_app/build/linux -DCMAKE_BUILD_TYPE=Release
+          cmake --build demo_app/build/linux --config Release
           rm -rf "$RELEASE_DIR"
-          cmake --install example/build/linux --prefix "$RELEASE_DIR"
+          cmake --install demo_app/build/linux --prefix "$RELEASE_DIR"
 
       - name: Package Linux artifacts
         shell: bash
@@ -271,7 +271,7 @@ jobs:
     env:
       TARGET_OS: mac
       TARGET_ARCH: arm64
-      RELEASE_DIR: example/release/macos-arm64
+      RELEASE_DIR: demo_app/release/macos-arm64
       OUTPUT_DIR: dist/macos
       APP_EXECUTABLE: demo_easyinstaller
     steps:
@@ -335,17 +335,17 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
           security list-keychains -d user -s build.keychain
 
-      - name: Build example release folder
+      - name: Build demo app release folder
         shell: bash
         run: |
           # Apple Silicon binaries require macOS 11.0 or newer even when built on the latest runner.
-          cmake -S example -B example/build/macos \
+          cmake -S demo_app -B demo_app/build/macos \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-          cmake --build example/build/macos --config Release
+          cmake --build demo_app/build/macos --config Release
           rm -rf "$RELEASE_DIR"
-          cmake --install example/build/macos --config Release --prefix "$RELEASE_DIR"
+          cmake --install demo_app/build/macos --config Release --prefix "$RELEASE_DIR"
 
       - name: Package macOS artifacts
         shell: bash
