@@ -83,6 +83,8 @@ _NSIS_TEMPLATE = r"""!include "MUI2.nsh"
 
 Name "{app_name}"
 OutFile "{output_file}"
+Unicode True
+SetCompressor /FINAL lzma
 InstallDir "$LOCALAPPDATA\Programs\{install_name}"
 RequestExecutionLevel user
 SilentInstall normal

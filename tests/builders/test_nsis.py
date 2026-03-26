@@ -74,6 +74,25 @@ class TestBuildNsis:
         assert "SilentInstall normal" in captured["script"]
         assert "SilentUnInstall normal" in captured["script"]
 
+    def test_generated_script_enables_unicode_and_lzma(self, tmp_path, command_spy):
+        _calls, patch_run, _patch_subprocess = command_spy
+        captured = {}
+
+        def inspect_script(args, _kwargs):
+            captured["script"] = pathlib.Path(args[1]).read_text()
+
+        patch_run("easyinstaller.builders.nsis", side_effect=inspect_script)
+
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "app.exe").write_text("binary")
+
+        cfg = base_cfg(str(src), str(tmp_path / "setup"), target_os="windows", target_type="nsis")
+        build_nsis(cfg)
+
+        assert "Unicode True" in captured["script"]
+        assert "SetCompressor /FINAL lzma" in captured["script"]
+
     def test_generated_script_uses_per_user_install_scope(self, tmp_path, command_spy):
         _calls, patch_run, _patch_subprocess = command_spy
         captured = {}
