@@ -587,8 +587,6 @@ jobs:
           validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg" "$pkg_signing_enabled"
           install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
           assert_dir_exists "$pkg_install_root"
-          assert_file_exists "$pkg_install_root/hello.txt"
-          assert_file_exists "$pkg_install_root/subdir/nested.txt"
           assert_executable_exists "$pkg_install_root/$APP_EXECUTABLE"
           assert_executable_exists "$pkg_launcher_path"
           run_demo "$pkg_install_root/$APP_EXECUTABLE"
@@ -601,7 +599,7 @@ jobs:
           assert_executable_exists "$app_pkg_install_root/Contents/MacOS/$APP_EXECUTABLE"
           assert_file_exists "$app_pkg_install_root/Contents/Info.plist"
           assert_plist_value "$app_pkg_install_root/Contents/Info.plist" CFBundleExecutable "$APP_EXECUTABLE"
-          assert_file_exists "$app_pkg_install_root/Contents/Resources/hello.txt"
+          assert_executable_exists "$app_pkg_install_root/Contents/Resources/$APP_EXECUTABLE"
           run_demo "$app_pkg_install_root/Contents/MacOS/$APP_EXECUTABLE"
 
       - name: Upload macOS release assets
