@@ -27,12 +27,19 @@ if(NOT TARGET portable_file_dialogs)
     target_include_directories(portable_file_dialogs INTERFACE ${portable_file_dialogs_SOURCE_DIR})
 endif()
 
+add_library(demo_name SHARED
+    demo_name.cpp
+)
+
+target_include_directories(demo_name PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(demo_name PRIVATE DEMO_NAME_BUILD_SHARED)
+
 add_executable(demo_easyinstaller
     main.cpp
 )
 
 target_include_directories(demo_easyinstaller PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(demo_easyinstaller PRIVATE portable_file_dialogs)
+target_link_libraries(demo_easyinstaller PRIVATE demo_name portable_file_dialogs)
 
 if(APPLE)
     set_target_properties(demo_easyinstaller PROPERTIES
@@ -46,6 +53,7 @@ elseif(UNIX)
     )
 endif()
 
-install(TARGETS demo_easyinstaller
+install(TARGETS demo_name demo_easyinstaller
     RUNTIME DESTINATION .
+    LIBRARY DESTINATION .
 )

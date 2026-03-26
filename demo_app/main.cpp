@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include "demo_name.hpp"
+#include "demo_name.h"
 
 int main(int argc, char* argv[]) {
     bool headless = false;
