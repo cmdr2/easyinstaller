@@ -1,4 +1,4 @@
-name: Release Demo App Packages
+name: CI
 
 on:
   workflow_dispatch:
