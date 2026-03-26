@@ -185,9 +185,7 @@ The development certificate and app-specific password can be reused for signing 
     fi
     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
     security list-keychains -d user -s build.keychain
-```
 
-```yaml
 - name: Build notarized package
   run: |
     easyinstaller --source ./build --os mac --arch arm64 --type app-in-dmg \
