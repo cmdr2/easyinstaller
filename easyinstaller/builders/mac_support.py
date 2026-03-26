@@ -14,6 +14,14 @@ from ..config import Config
 from .common import _require, _run
 
 
+def _mac_application_sign_identity(cfg: Config) -> str:
+    return f"Developer ID Application: {cfg.mac_notary_team_name} ({cfg.mac_notary_team_id})"
+
+
+def _mac_installer_sign_identity(cfg: Config) -> str:
+    return f"Developer ID Installer: {cfg.mac_notary_team_name} ({cfg.mac_notary_team_id})"
+
+
 def _is_signable_file(path: str) -> bool:
     if os.path.isdir(path) or os.path.islink(path):
         return False
@@ -37,7 +45,18 @@ def _iter_signable_paths(root: str) -> list[str]:
 
 
 def _codesign_path(path: str, cfg: Config) -> None:
-    _run(["codesign", "--force", "--sign", cfg.mac_sign_identity, "--timestamp", "--options", "runtime", path])
+    _run(
+        [
+            "codesign",
+            "--force",
+            "--sign",
+            _mac_application_sign_identity(cfg),
+            "--timestamp",
+            "--options",
+            "runtime",
+            path,
+        ]
+    )
 
 
 def _notarytool_auth_args(cfg: Config) -> list[str]:
@@ -99,13 +118,67 @@ def _finalize_mac_output(cfg: Config, output_file: str) -> None:
     if cfg.target_os != "mac" or not cfg.mac_notarize:
         return
     _submit_for_notarization(output_file, cfg)
-    if cfg.target_type in {"app", "dmg", "app-in-dmg"}:
+    if cfg.target_type in {"app", "dmg", "app-in-dmg", "pkg", "app-in-pkg"}:
         _staple_ticket(output_file)
 
 
 def _create_dmg_image(source: str, output_file: str, volume_name: str) -> str:
     _require("hdiutil")
     _run(["hdiutil", "create", "-volname", volume_name, "-srcfolder", source, "-ov", "-format", "UDZO", output_file])
+    return output_file
+
+
+def _create_pkg_from_root(
+    source: str,
+    output_file: str,
+    install_location: str,
+    identifier: str,
+    version: str,
+    cfg: Config | None = None,
+) -> str:
+    _require("pkgbuild")
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    args = [
+        "pkgbuild",
+        "--root",
+        source,
+        "--identifier",
+        identifier,
+        "--version",
+        version,
+    ]
+    if cfg is not None and cfg.mac_notarize:
+        args.extend(["--sign", _mac_installer_sign_identity(cfg)])
+    args.extend(["--install-location", install_location, output_file])
+    _run(args)
+    return output_file
+
+
+def _create_pkg_from_component(
+    component_path: str,
+    output_file: str,
+    install_location: str,
+    identifier: str,
+    version: str,
+    cfg: Config | None = None,
+) -> str:
+    _require("pkgbuild")
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    args = [
+        "pkgbuild",
+        "--component",
+        component_path,
+        "--identifier",
+        identifier,
+        "--version",
+        version,
+    ]
+    if cfg is not None and cfg.mac_notarize:
+        args.extend(["--sign", _mac_installer_sign_identity(cfg)])
+    args.extend(["--install-location", install_location, output_file])
+    _run(args)
     return output_file
 
 

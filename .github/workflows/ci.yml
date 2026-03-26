@@ -308,30 +308,46 @@ jobs:
         id: check-signing
         shell: bash
         run: |
-          echo "enabled=${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_NAME != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}" >> "$GITHUB_OUTPUT"
+          echo "app_notarization_enabled=${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_NAME != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}" >> "$GITHUB_OUTPUT"
+          echo "pkg_notarization_enabled=${{ secrets.MAC_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_CERTIFICATE_PASSWORD != '' && secrets.MAC_INSTALLER_CERTIFICATE_P12_BASE64 != '' && secrets.MAC_INSTALLER_CERTIFICATE_PASSWORD != '' && secrets.MAC_NOTARY_TEAM_NAME != '' && secrets.MAC_NOTARY_APPLE_ID != '' && secrets.MAC_NOTARY_TEAM_ID != '' && secrets.MAC_NOTARY_PASSWORD != '' }}" >> "$GITHUB_OUTPUT"
 
       - name: Import signing certificate
-        if: steps.check-signing.outputs.enabled == 'true'
+        if: steps.check-signing.outputs.app_notarization_enabled == 'true'
         shell: bash
         env:
           MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          MAC_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.MAC_INSTALLER_CERTIFICATE_PASSWORD }}
         run: |
-          printf '%s' "${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}" | base64 --decode > cert.p12
-          if ! openssl pkcs12 -in cert.p12 -passin env:MAC_CERTIFICATE_PASSWORD -noout >/dev/null; then
-            echo "Decoded cert.p12 could not be opened with MAC_CERTIFICATE_PASSWORD."
-            echo "Make sure MAC_CERTIFICATE_P12_BASE64 was created from developer-id.p12 and MAC_CERTIFICATE_PASSWORD matches the Export Password used by openssl pkcs12 -export."
-            exit 1
-          fi
-          openssl pkcs12 -in cert.p12 -passin env:MAC_CERTIFICATE_PASSWORD -nodes -out cert.pem
-          openssl pkcs12 -export -in cert.pem -out cert-compat.p12 \
-            -passout env:MAC_CERTIFICATE_PASSWORD \
-            -keypbe PBE-SHA1-3DES \
-            -certpbe PBE-SHA1-3DES \
-            -macalg sha1
+          import_certificate() {
+            local cert_base64="$1"
+            local cert_password="$2"
+            local prefix="$3"
+            local secret_name="$4"
+
+            printf '%s' "$cert_base64" | base64 --decode > "$prefix.p12"
+            if ! openssl pkcs12 -in "$prefix.p12" -passin pass:"$cert_password" -noout >/dev/null; then
+              echo "Decoded $prefix.p12 could not be opened with the provided password for $secret_name."
+              echo "Make sure $secret_name was created from the expected .p12 file and the matching Export Password is configured in GitHub Actions secrets."
+              exit 1
+            fi
+            openssl pkcs12 -in "$prefix.p12" -passin pass:"$cert_password" -nodes -out "$prefix.pem"
+            openssl pkcs12 -export -in "$prefix.pem" -out "$prefix-compat.p12" \
+              -passout pass:"$cert_password" \
+              -keypbe PBE-SHA1-3DES \
+              -certpbe PBE-SHA1-3DES \
+              -macalg sha1
+            security import "$prefix-compat.p12" -k build.keychain -P "$cert_password" -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productsign -T /usr/bin/pkgbuild
+          }
+
           security create-keychain -p "$RUNNER_TEMP" build.keychain
           security unlock-keychain -p "$RUNNER_TEMP" build.keychain
           security default-keychain -s build.keychain
-          security import cert-compat.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+
+          import_certificate "${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}" "$MAC_CERTIFICATE_PASSWORD" app-cert MAC_CERTIFICATE_P12_BASE64
+          if [[ "${{ steps.check-signing.outputs.pkg_notarization_enabled }}" == "true" ]]; then
+            import_certificate "${{ secrets.MAC_INSTALLER_CERTIFICATE_P12_BASE64 }}" "$MAC_INSTALLER_CERTIFICATE_PASSWORD" installer-cert MAC_INSTALLER_CERTIFICATE_P12_BASE64
+          fi
+
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
           security list-keychains -d user -s build.keychain
 
@@ -354,12 +370,25 @@ jobs:
           archive_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
           dmg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files"
           app_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64"
+          pkg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files"
+          app_pkg_base="$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer"
           notarize_args=()
+          pkg_notarize_args=()
 
-          if [[ "${{ steps.check-signing.outputs.enabled }}" == "true" ]]; then
+          if [[ "${{ steps.check-signing.outputs.app_notarization_enabled }}" == "true" ]]; then
             notarize_args=(
               --mac-notarize
-              --mac-sign-identity "Developer ID Application: ${{ secrets.MAC_NOTARY_TEAM_NAME }} (${{ secrets.MAC_NOTARY_TEAM_ID }})"
+              --mac-notary-team-name "${{ secrets.MAC_NOTARY_TEAM_NAME }}"
+              --mac-notary-apple-id "${{ secrets.MAC_NOTARY_APPLE_ID }}"
+              --mac-notary-team-id "${{ secrets.MAC_NOTARY_TEAM_ID }}"
+              --mac-notary-password "${{ secrets.MAC_NOTARY_PASSWORD }}"
+            )
+          fi
+
+          if [[ "${{ steps.check-signing.outputs.pkg_notarization_enabled }}" == "true" ]]; then
+            pkg_notarize_args=(
+              --mac-notarize
+              --mac-notary-team-name "${{ secrets.MAC_NOTARY_TEAM_NAME }}"
               --mac-notary-apple-id "${{ secrets.MAC_NOTARY_APPLE_ID }}"
               --mac-notary-team-id "${{ secrets.MAC_NOTARY_TEAM_ID }}"
               --mac-notary-password "${{ secrets.MAC_NOTARY_PASSWORD }}"
@@ -370,13 +399,16 @@ jobs:
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type tar.gz --output "$archive_base"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type dmg --output "$dmg_base" --app-name "$APP_NAME" "${notarize_args[@]}"
           easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-dmg --output "$app_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE" "${notarize_args[@]}"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type pkg --output "$pkg_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE" "${pkg_notarize_args[@]}"
+          easyinstaller --source "$RELEASE_DIR" --os "$TARGET_OS" --arch "$TARGET_ARCH" --type app-in-pkg --output "$app_pkg_base" --app-name "$APP_NAME" --app-version "$APP_VERSION" --app-exec "$APP_EXECUTABLE" "${pkg_notarize_args[@]}"
 
       - name: Test macOS installers
         shell: bash
         run: |
           set -euo pipefail
 
-          signing_enabled="${{ steps.check-signing.outputs.enabled }}"
+          app_signing_enabled="${{ steps.check-signing.outputs.app_notarization_enabled }}"
+          pkg_signing_enabled="${{ steps.check-signing.outputs.pkg_notarization_enabled }}"
           package_root="$(basename "$RELEASE_DIR")"
           zip_extract="$RUNNER_TEMP/macos-zip"
           targz_extract="$RUNNER_TEMP/macos-targz"
@@ -384,6 +416,9 @@ jobs:
           app_dmg_mount="$RUNNER_TEMP/macos-app-dmg-mount"
           dmg_extract="$RUNNER_TEMP/macos-dmg-files"
           app_dmg_extract="$RUNNER_TEMP/macos-app-dmg-files"
+          pkg_install_root="$HOME/opt/$PACKAGE_NAME"
+          pkg_launcher_path="$HOME/usr/local/bin/$APP_EXECUTABLE"
+          app_pkg_install_root="$HOME/Applications/$APP_NAME.app"
 
           quarantine_value() {
             printf '0083;%x;GitHubActions;%s\n' "$(date +%s)" "$(uuidgen)"
@@ -402,7 +437,7 @@ jobs:
 
           assess_gatekeeper_app() {
             local target_path="$1"
-            if [[ "$signing_enabled" != "true" ]]; then
+            if [[ "$app_signing_enabled" != "true" ]]; then
               return 0
             fi
             spctl --assess --verbose=4 --type execute "$target_path"
@@ -410,15 +445,25 @@ jobs:
 
           validate_stapled_ticket() {
             local target_path="$1"
+            local signing_enabled="$2"
             if [[ "$signing_enabled" != "true" ]]; then
               return 0
             fi
             xcrun stapler validate "$target_path"
           }
 
+          validate_pkg_signature() {
+            local package_path="$1"
+            if [[ "$pkg_signing_enabled" != "true" ]]; then
+              return 0
+            fi
+            pkgutil --check-signature "$package_path"
+            spctl --assess --verbose=4 --type install "$package_path"
+          }
+
           verify_signed_binary() {
             local target_path="$1"
-            if [[ "$signing_enabled" != "true" ]]; then
+            if [[ "$app_signing_enabled" != "true" ]]; then
               return 0
             fi
             codesign --verify --verbose=4 --strict "$target_path"
@@ -459,7 +504,13 @@ jobs:
             shopt -u dotglob nullglob
           }
 
-          rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount" "$dmg_extract" "$app_dmg_extract"
+          install_user_pkg() {
+            local package_path="$1"
+            installer -pkg "$package_path" -target CurrentUserHomeDirectory
+          }
+
+          rm -rf "$zip_extract" "$targz_extract" "$dmg_mount" "$app_dmg_mount" "$dmg_extract" "$app_dmg_extract" "$pkg_install_root" "$app_pkg_install_root"
+          rm -f "$pkg_launcher_path"
           unzip -q "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.zip" -d "$zip_extract"
           verify_signed_binary "$zip_extract/$package_root/$APP_EXECUTABLE"
           run_demo "$zip_extract/$package_root/$APP_EXECUTABLE"
@@ -470,7 +521,7 @@ jobs:
           run_demo "$targz_extract/$package_root/$APP_EXECUTABLE"
 
           mkdir -p "$dmg_mount"
-          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg" "$app_signing_enabled"
           hdiutil attach -nobrowse -readonly -mountpoint "$dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.dmg"
           copy_mount_contents "$dmg_mount" "$dmg_extract"
           hdiutil detach "$dmg_mount"
@@ -478,7 +529,7 @@ jobs:
           run_demo "$(find_dmg_binary "$dmg_extract")"
 
           mkdir -p "$app_dmg_mount"
-          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg" "$app_signing_enabled"
           hdiutil attach -nobrowse -readonly -mountpoint "$app_dmg_mount" "$OUTPUT_DIR/demo-easyinstaller-macos-arm64.dmg"
           mkdir -p "$app_dmg_extract"
           ditto "$app_dmg_mount/$APP_NAME.app" "$app_dmg_extract/$APP_NAME.app"
@@ -486,6 +537,20 @@ jobs:
           mark_as_downloaded "$app_dmg_extract/$APP_NAME.app"
           assess_gatekeeper_app "$app_dmg_extract/$APP_NAME.app"
           run_demo "$app_dmg_extract/$APP_NAME.app/Contents/MacOS/$APP_EXECUTABLE"
+
+          validate_pkg_signature "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg" "$pkg_signing_enabled"
+          install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
+          [[ -f "$pkg_install_root/hello.txt" ]]
+          [[ -x "$pkg_launcher_path" ]]
+          run_demo "$pkg_launcher_path"
+          [[ -f "$pkg_install_root/hello.txt" ]]
+
+          validate_pkg_signature "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg"
+          validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg" "$pkg_signing_enabled"
+          install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg"
+          run_demo "$app_pkg_install_root/Contents/MacOS/$APP_EXECUTABLE"
+          [[ -f "$app_pkg_install_root/Contents/Resources/hello.txt" ]]
 
       - name: Upload macOS release assets
         if: github.event_name == 'release'

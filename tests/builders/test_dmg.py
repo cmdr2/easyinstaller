@@ -27,7 +27,8 @@ class TestBuildDmg:
             target_type="dmg",
             arch="arm64",
             mac_notarize=True,
-            mac_sign_identity="Developer ID Application: Example",
+            mac_notary_team_name="Example, Inc.",
+            mac_notary_team_id="TEAMID1234",
             mac_notary_keychain_profile="notary-profile",
         )
         result = build_dmg(cfg)

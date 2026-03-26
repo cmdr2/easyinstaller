@@ -2,7 +2,7 @@
 
 Create installers and archives from a release folder for any target OS.
 
-Give it a folder, pick a target platform and format, and it produces the package - zip, tar.gz, deb, rpm, AppImage, Flatpak, Snap, NSIS installer, DMG, a macOS .app bundle, or a DMG containing a .app bundle.
+Give it a folder, pick a target platform and format, and it produces the package - zip, tar.gz, deb, rpm, AppImage, Flatpak, Snap, NSIS installer, DMG, a macOS .app bundle, a PKG installer, a DMG containing a .app bundle, or a PKG containing a .app bundle.
 
 ## Supported targets
 
@@ -10,7 +10,7 @@ Give it a folder, pick a target platform and format, and it produces the package
 |---------|----------------------------------------------------|
 | Windows | `zip`, `tar.gz`, `nsis`                            |
 | Linux   | `zip`, `tar.gz`, `deb`, `rpm`, `appimage`, `flatpak`, `snap` |
-| Mac     | `zip`, `tar.gz`, `dmg`, `app`, `app-in-dmg`        |
+| Mac     | `zip`, `tar.gz`, `dmg`, `app`, `app-in-dmg`, `pkg`, `app-in-pkg` |
 
 ## Installation
 
@@ -56,7 +56,17 @@ easyinstaller --source ./build --os mac --arch arm64 --type app-in-dmg \
     --output MyApp \
     --app-name "My App" --app-exec myapp \
     --mac-notarize \
-    --mac-sign-identity "Developer ID Application: Example, Inc. (TEAMID1234)" \
+    --mac-notary-team-name "Example, Inc." \
+    --mac-notary-team-id TEAMID1234 \
+    --mac-notary-keychain-profile my-notary-profile
+
+# Create a notarized macOS PKG that installs a .app bundle into Applications
+easyinstaller --source ./build --os mac --arch arm64 --type app-in-pkg \
+    --output MyApp \
+    --app-name "My App" --app-version 1.0.0 --app-exec myapp \
+    --mac-notarize \
+    --mac-notary-team-name "Example, Inc." \
+    --mac-notary-team-id TEAMID1234 \
     --mac-notary-keychain-profile my-notary-profile
 
 # Use a folder path for output; this creates dist/release/release.zip
@@ -84,6 +94,7 @@ Other formats require the corresponding tool to be installed on the build machin
 | `flatpak`  | `flatpak`, `flatpak-builder` |
 | `snap`     | `snapcraft`       |
 | `dmg`      | `hdiutil` (macOS) |
+| `pkg`, `app-in-pkg` | `pkgbuild` (macOS) |
 | mac notarization | `codesign`, `xcrun notarytool`, `xcrun stapler` (macOS) |
 
 ## Running tests

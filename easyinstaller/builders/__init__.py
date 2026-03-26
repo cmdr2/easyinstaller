@@ -8,12 +8,14 @@ from typing import Callable
 from ..config import Config
 from .app import build_app
 from .app_in_dmg import build_app_in_dmg
+from .app_in_pkg import build_app_in_pkg
 from .appimage import build_appimage
 from .common import _appimage_arch, _flatpak_arch, _sanitise_name
 from .deb import build_deb
 from .dmg import build_dmg
 from .flatpak import build_flatpak
 from .nsis import _NSIS_TEMPLATE, build_nsis
+from .pkg import build_pkg
 from .rpm import build_rpm
 from .snap import build_snap
 from .tar_gz import build_tar_gz
@@ -31,6 +33,8 @@ BUILDERS: dict[str, Callable[[Config], str]] = {
     "dmg": build_dmg,
     "app": build_app,
     "app-in-dmg": build_app_in_dmg,
+    "pkg": build_pkg,
+    "app-in-pkg": build_app_in_pkg,
 }
 
 
@@ -56,11 +60,13 @@ __all__ = [
     "build",
     "build_app",
     "build_app_in_dmg",
+    "build_app_in_pkg",
     "build_appimage",
     "build_deb",
     "build_dmg",
     "build_flatpak",
     "build_nsis",
+    "build_pkg",
     "build_rpm",
     "build_snap",
     "build_tar_gz",

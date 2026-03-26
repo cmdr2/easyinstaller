@@ -49,5 +49,9 @@ def unmount_dmg(mount_path: Path) -> None:
     run_command(["hdiutil", "detach", str(mount_path)])
 
 
+def install_pkg(package_path: str) -> None:
+    run_command(["installer", "-pkg", package_path, "-target", "CurrentUserHomeDirectory"])
+
+
 def assert_contains_any(root: Path, candidates: list[Path]) -> None:
     assert any((root / candidate).exists() for candidate in candidates)

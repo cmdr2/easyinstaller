@@ -25,7 +25,8 @@ class TestBuildAppInDmg:
             arch="arm64",
             app_exec="myapp",
             mac_notarize=True,
-            mac_sign_identity="Developer ID Application: Example",
+            mac_notary_team_name="Example, Inc.",
+            mac_notary_team_id="TEAMID1234",
             mac_notary_keychain_profile="notary-profile",
         )
         result = build_app_in_dmg(cfg)

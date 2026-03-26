@@ -20,6 +20,13 @@ class TestValidation:
         cfg = base_cfg(source_dir, output_path, target_os="mac", target_type="app-in-dmg", arch="arm64")
         assert cfg.target_type == "app-in-dmg"
 
+    def test_supports_pkg_targets(self, source_dir, output_path):
+        cfg = base_cfg(source_dir, output_path, target_os="mac", target_type="pkg", arch="arm64")
+        assert cfg.target_type == "pkg"
+
+        cfg = base_cfg(source_dir, output_path, target_os="mac", target_type="app-in-pkg", arch="arm64")
+        assert cfg.target_type == "app-in-pkg"
+
     def test_os_aliases(self, source_dir, output_path):
         for alias, expected in [("win", "windows"), ("macos", "mac"), ("osx", "mac")]:
             cfg = base_cfg(source_dir, output_path, target_os=alias)
@@ -46,12 +53,13 @@ class TestValidation:
                 target_os="linux",
                 target_type="zip",
                 mac_notarize=True,
-                mac_sign_identity="Developer ID Application: Example",
+                mac_notary_team_name="Example, Inc.",
+                mac_notary_team_id="TEAMID1234",
                 mac_notary_keychain_profile="notary-profile",
             )
 
-    def test_mac_notarize_requires_sign_identity(self, source_dir, output_path):
-        with pytest.raises(ConfigError, match="requires --mac-sign-identity"):
+    def test_mac_notarize_requires_team_name(self, source_dir, output_path):
+        with pytest.raises(ConfigError, match="requires --mac-notary-team-name"):
             base_cfg(
                 source_dir,
                 output_path,
@@ -59,6 +67,20 @@ class TestValidation:
                 target_type="zip",
                 arch="arm64",
                 mac_notarize=True,
+                mac_notary_team_id="TEAMID1234",
+                mac_notary_keychain_profile="notary-profile",
+            )
+
+    def test_mac_notarize_requires_team_id(self, source_dir, output_path):
+        with pytest.raises(ConfigError, match="requires --mac-notary-team-id"):
+            base_cfg(
+                source_dir,
+                output_path,
+                target_os="mac",
+                target_type="zip",
+                arch="arm64",
+                mac_notarize=True,
+                mac_notary_team_name="Example, Inc.",
                 mac_notary_keychain_profile="notary-profile",
             )
 
@@ -71,11 +93,14 @@ class TestValidation:
                 target_type="zip",
                 arch="arm64",
                 mac_notarize=True,
-                mac_sign_identity="Developer ID Application: Example",
+                mac_notary_team_name="Example, Inc.",
+                mac_notary_team_id="TEAMID1234",
             )
 
     def test_mac_notarize_rejects_tar_gz(self, source_dir, output_path):
-        with pytest.raises(ConfigError, match="only supported for mac types: zip, dmg, app, app-in-dmg"):
+        with pytest.raises(
+            ConfigError, match="only supported for mac types: zip, dmg, app, app-in-dmg, pkg, app-in-pkg"
+        ):
             base_cfg(
                 source_dir,
                 output_path,
@@ -83,7 +108,8 @@ class TestValidation:
                 target_type="tar.gz",
                 arch="arm64",
                 mac_notarize=True,
-                mac_sign_identity="Developer ID Application: Example",
+                mac_notary_team_name="Example, Inc.",
+                mac_notary_team_id="TEAMID1234",
                 mac_notary_keychain_profile="notary-profile",
             )
 

@@ -27,14 +27,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "supported types:\n"
             "  Windows:  zip, tar.gz, nsis\n"
             "  Linux:    zip, tar.gz, deb, rpm, appimage, flatpak, snap\n"
-            "  Mac:      zip, tar.gz, dmg, app, app-in-dmg\n"
+            "  Mac:      zip, tar.gz, dmg, app, app-in-dmg, pkg, app-in-pkg\n"
             "\n"
             "examples:\n"
             "  easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz --output myapp-linux-x64\n"
             "  easyinstaller --source ./build --os linux --arch x86_64 --type deb --output myapp \\\n"
             "      --app-name MyApp --app-version 1.0.0 --app-exec myapp\n"
             "  easyinstaller --source ./build --os mac --arch arm64 --type app-in-dmg --output MyApp \\\n"
-            '      --app-name MyApp --app-exec myapp --mac-notarize --mac-sign-identity "Developer ID Application: Example" \\\n'
+            '      --app-name MyApp --app-exec myapp --mac-notarize --mac-notary-team-name "Example, Inc." \\\n'
+            "      --mac-notary-team-id TEAMID1234 --mac-notary-keychain-profile my-notary-profile\n"
+            "  easyinstaller --source ./build --os mac --arch arm64 --type app-in-pkg --output MyApp \\\n"
+            "      --app-name MyApp --app-version 1.0.0 --app-exec myapp --mac-notarize \\\n"
+            '      --mac-notary-team-name "Example, Inc." --mac-notary-team-id TEAMID1234 \\\n'
             "      --mac-notary-keychain-profile my-notary-profile\n"
         ),
     )
@@ -72,9 +76,9 @@ def _build_parser() -> argparse.ArgumentParser:
     mac = parser.add_argument_group("mac notarization")
     mac.add_argument("--mac-notarize", action="store_true", help="Sign and submit mac outputs for notarization")
     mac.add_argument(
-        "--mac-sign-identity",
+        "--mac-notary-team-name",
         default=None,
-        help="codesign identity, for example a Developer ID Application certificate",
+        help="Apple Developer team name used to derive Developer ID signing identities",
     )
     mac.add_argument(
         "--mac-notary-keychain-profile",
@@ -112,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         app_exec=args.app_exec,
         app_icon=args.app_icon,
         mac_notarize=args.mac_notarize,
-        mac_sign_identity=args.mac_sign_identity,
+        mac_notary_team_name=args.mac_notary_team_name,
         mac_notary_keychain_profile=args.mac_notary_keychain_profile,
         mac_notary_apple_id=args.mac_notary_apple_id,
         mac_notary_team_id=args.mac_notary_team_id,

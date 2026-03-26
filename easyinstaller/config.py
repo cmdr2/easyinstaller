@@ -16,7 +16,7 @@ SUPPORTED_ARCH = ("x86_64", "arm64", "i386", "armhf")
 TYPES_BY_OS: dict[str, tuple[str, ...]] = {
     "windows": ("zip", "tar.gz", "nsis"),
     "linux": ("zip", "tar.gz", "deb", "rpm", "appimage", "flatpak", "snap"),
-    "mac": ("zip", "tar.gz", "dmg", "app", "app-in-dmg"),
+    "mac": ("zip", "tar.gz", "dmg", "app", "app-in-dmg", "pkg", "app-in-pkg"),
 }
 
 OS_ALIASES: dict[str, str] = {
@@ -42,6 +42,8 @@ TYPE_ALIASES: dict[str, str] = {
     "dmg": "dmg",
     "app": "app",
     "app-in-dmg": "app-in-dmg",
+    "pkg": "pkg",
+    "app-in-pkg": "app-in-pkg",
 }
 
 # ── Data class ───────────────────────────────────────────────────────────────
@@ -66,8 +68,8 @@ class Config:
     app_exec: Optional[str] = None
     app_icon: Optional[str] = None
     mac_notarize: bool = False
-    mac_sign_identity: Optional[str] = None
     mac_notary_keychain_profile: Optional[str] = None
+    mac_notary_team_name: Optional[str] = None
     mac_notary_apple_id: Optional[str] = None
     mac_notary_team_id: Optional[str] = None
     mac_notary_password: Optional[str] = None
@@ -151,10 +153,14 @@ def validate_and_normalise(cfg: Config) -> Config:
     if cfg.mac_notarize:
         if target_os != "mac":
             raise ConfigError("--mac-notarize is only supported for mac targets")
-        if not cfg.mac_sign_identity:
-            raise ConfigError("--mac-notarize requires --mac-sign-identity")
-        if target_type not in {"zip", "dmg", "app", "app-in-dmg"}:
-            raise ConfigError("--mac-notarize is only supported for mac types: zip, dmg, app, app-in-dmg")
+        if not cfg.mac_notary_team_name:
+            raise ConfigError("--mac-notarize requires --mac-notary-team-name")
+        if not cfg.mac_notary_team_id:
+            raise ConfigError("--mac-notarize requires --mac-notary-team-id")
+        if target_type not in {"zip", "dmg", "app", "app-in-dmg", "pkg", "app-in-pkg"}:
+            raise ConfigError(
+                "--mac-notarize is only supported for mac types: zip, dmg, app, app-in-dmg, pkg, app-in-pkg"
+            )
         has_keychain_profile = bool(cfg.mac_notary_keychain_profile)
         has_direct_credentials = all([cfg.mac_notary_apple_id, cfg.mac_notary_team_id, cfg.mac_notary_password])
         if not has_keychain_profile and not has_direct_credentials:
