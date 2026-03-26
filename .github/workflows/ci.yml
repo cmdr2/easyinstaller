@@ -221,7 +221,10 @@ jobs:
             fi
             local output
             output="$($binary_path --headless)"
-            [[ "$output" == *"Hello easyinstaller"* ]]
+            if [[ "$output" != *"Hello easyinstaller"* ]]; then
+              echo "Unexpected output from $binary_path: $output" >&2
+              return 1
+            fi
           }
 
           rm -rf "$zip_extract" "$targz_extract"
@@ -461,6 +464,42 @@ jobs:
             spctl --assess --verbose=4 --type install "$package_path"
           }
 
+          assert_file_exists() {
+            local target_path="$1"
+            if [[ ! -f "$target_path" ]]; then
+              echo "Missing file: $target_path" >&2
+              return 1
+            fi
+          }
+
+          assert_dir_exists() {
+            local target_path="$1"
+            if [[ ! -d "$target_path" ]]; then
+              echo "Missing directory: $target_path" >&2
+              return 1
+            fi
+          }
+
+          assert_executable_exists() {
+            local target_path="$1"
+            if [[ ! -x "$target_path" ]]; then
+              echo "Missing executable: $target_path" >&2
+              return 1
+            fi
+          }
+
+          assert_plist_value() {
+            local plist_path="$1"
+            local key="$2"
+            local expected_value="$3"
+            local actual_value
+            actual_value="$(/usr/libexec/PlistBuddy -c "Print :$key" "$plist_path")"
+            if [[ "$actual_value" != "$expected_value" ]]; then
+              echo "Unexpected plist value for $key in $plist_path: expected '$expected_value', got '$actual_value'" >&2
+              return 1
+            fi
+          }
+
           verify_signed_binary() {
             local target_path="$1"
             if [[ "$app_signing_enabled" != "true" ]]; then
@@ -477,7 +516,10 @@ jobs:
             fi
             local output
             output="$($binary_path --headless)"
-            [[ "$output" == *"Hello easyinstaller"* ]]
+            if [[ "$output" != *"Hello easyinstaller"* ]]; then
+              echo "Unexpected output from $binary_path: $output" >&2
+              return 1
+            fi
           }
 
           find_dmg_binary() {
@@ -541,16 +583,23 @@ jobs:
           validate_pkg_signature "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
           validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg" "$pkg_signing_enabled"
           install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-files.pkg"
-          [[ -f "$pkg_install_root/hello.txt" ]]
-          [[ -x "$pkg_launcher_path" ]]
+          assert_dir_exists "$pkg_install_root"
+          assert_file_exists "$pkg_install_root/hello.txt"
+          assert_file_exists "$pkg_install_root/subdir/nested.txt"
+          assert_executable_exists "$pkg_install_root/$APP_EXECUTABLE"
+          assert_executable_exists "$pkg_launcher_path"
+          run_demo "$pkg_install_root/$APP_EXECUTABLE"
           run_demo "$pkg_launcher_path"
-          [[ -f "$pkg_install_root/hello.txt" ]]
 
           validate_pkg_signature "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg"
           validate_stapled_ticket "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg" "$pkg_signing_enabled"
           install_user_pkg "$OUTPUT_DIR/demo-easyinstaller-macos-arm64-installer.pkg"
+          assert_dir_exists "$app_pkg_install_root"
+          assert_executable_exists "$app_pkg_install_root/Contents/MacOS/$APP_EXECUTABLE"
+          assert_file_exists "$app_pkg_install_root/Contents/Info.plist"
+          assert_plist_value "$app_pkg_install_root/Contents/Info.plist" CFBundleExecutable "$APP_EXECUTABLE"
+          assert_file_exists "$app_pkg_install_root/Contents/Resources/hello.txt"
           run_demo "$app_pkg_install_root/Contents/MacOS/$APP_EXECUTABLE"
-          [[ -f "$app_pkg_install_root/Contents/Resources/hello.txt" ]]
 
       - name: Upload macOS release assets
         if: github.event_name == 'release'

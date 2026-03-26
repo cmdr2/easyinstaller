@@ -33,7 +33,6 @@ class TestBuildPkg:
 
         assert result.endswith(".pkg")
         assert staged_root_has_payload == [True]
-        print(calls)
         assert any(
             call["args"][:2] == ["pkgbuild", "--root"]
             and "--identifier" in call["args"]
