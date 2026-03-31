@@ -43,10 +43,10 @@ jobs:
       - name: Install NSIS
         shell: bash
         run: |
-          nsis_zip="$RUNNER_TEMP/nsis-3.11.zip"
-          curl -L 'https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download' -o "$nsis_zip"
+          nsis_zip="$RUNNER_TEMP/nsis.zip"
+          curl -L 'https://sourceforge.net/projects/nsisbi/files/nsisbi3.10.3/nsis-binary-7423-3.zip/download' -o "$nsis_zip"
           unzip -q "$nsis_zip" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/nsis-3.11" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/nsis-binary-7423-3" >> "$GITHUB_PATH"
 
       - name: Set package version
         shell: bash

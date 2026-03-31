@@ -89,7 +89,7 @@ Other formats require the corresponding tool to be installed on the build machin
 
 | Type       | Requires          |
 |------------|-------------------|
-| `nsis`     | [makensis](https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download) |
+| `nsis`     | [makensis](https://sourceforge.net/projects/nsisbi/files/nsisbi3.10.3/nsis-binary-7423-3.zip/download) |
 | `deb`      | `dpkg-deb`        |
 | `rpm`      | `rpmbuild`        |
 | `appimage` | `appimagetool`    |

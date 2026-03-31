@@ -16,7 +16,7 @@ Run: `easyinstaller --source .\build --os windows --arch x86_64 --type tar.gz --
 
 ## nsis
 
-1. Install [NSIS](https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11.zip/download).
+1. Install [NSIS](https://sourceforge.net/projects/nsisbi/files/nsisbi3.10.3/nsis-binary-7423-3.zip/download).
 2. Confirm `makensis.exe` is on `PATH`.
 3. Run: `easyinstaller --source .\build --os windows --arch x86_64 --type nsis --output myapp-setup --app-name "My App" --app-version 1.0.0 --app-exec bin\myapp.exe`.
 
