@@ -261,29 +261,28 @@ def _write_app_dmg_background(destination_dir: str) -> str:
     return background_path
 
 
-def _style_app_dmg_window(mount_dir: str, volume_name: str, app_item_name: str) -> None:
+def _style_app_dmg_window(mount_dir: str, app_item_name: str) -> None:
     _require("osascript")
+    mount_dir = os.path.abspath(mount_dir)
     script_lines = [
         'tell application "Finder"',
-        'tell disk "' + _escape_applescript_string(volume_name) + '"',
-        "open",
-        "tell container window",
-        "set current view to icon view",
-        "set toolbar visible to false",
-        "set statusbar visible to false",
-        "set bounds to {120, 120, 760, 480}",
-        "end tell",
-        "set opts to icon view options of container window",
+        'set diskFolder to (POSIX file "' + _escape_applescript_string(mount_dir) + '" as alias)',
+        "open diskFolder",
+        "set dmgWindow to container window of diskFolder",
+        "set current view of dmgWindow to icon view",
+        "set toolbar visible of dmgWindow to false",
+        "set statusbar visible of dmgWindow to false",
+        "set bounds of dmgWindow to {120, 120, 760, 480}",
+        "set opts to icon view options of dmgWindow",
         "set arrangement of opts to not arranged",
         "set icon size of opts to 128",
-        'set background picture of opts to file ".background:background.png"',
-        'set position of item "' + _escape_applescript_string(app_item_name) + '" to {170, 180}',
-        'set position of item "Applications" to {470, 180}',
-        "close",
-        "open",
-        "update without registering applications",
+        'set background picture of opts to file ".background:background.png" of diskFolder',
+        'set position of item "' + _escape_applescript_string(app_item_name) + '" of diskFolder to {170, 180}',
+        'set position of item "Applications" of diskFolder to {470, 180}',
+        "close dmgWindow",
+        "open diskFolder",
+        "update diskFolder without registering applications",
         "delay 1",
-        "end tell",
         "end tell",
     ]
     args = ["osascript"]
@@ -316,7 +315,7 @@ def _create_styled_app_dmg_image(source: str, output_file: str, volume_name: str
         )
         _run(["hdiutil", "attach", temp_image.name, "-readwrite", "-noverify", "-noautoopen", "-mountpoint", mount_dir])
         try:
-            _style_app_dmg_window(mount_dir, volume_name, app_item_name)
+            _style_app_dmg_window(mount_dir, app_item_name)
         finally:
             _run(["hdiutil", "detach", mount_dir])
 

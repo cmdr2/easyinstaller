@@ -43,8 +43,8 @@ class TestBuildAppInDmg:
         )
         assert 'name:"Applications"' in " ".join(str(arg) for arg in alias_call["args"])
         layout_script = " ".join(str(arg) for arg in layout_call["args"])
-        assert 'set position of item "Test App.app" to {170, 180}' in layout_script
-        assert 'set position of item "Applications" to {470, 180}' in layout_script
+        assert 'set position of item "Test App.app" of diskFolder to {170, 180}' in layout_script
+        assert 'set position of item "Applications" of diskFolder to {470, 180}' in layout_script
 
     def test_builds_dmg_and_staples_when_notarized(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
