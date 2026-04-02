@@ -6,13 +6,19 @@ import os
 import plistlib
 import shutil
 import stat
+import struct
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import PurePosixPath
+import zlib
 
 from ..config import Config
 from .common import _require, _run
+
+
+def _escape_applescript_string(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def _mac_application_sign_identity(cfg: Config) -> str:
@@ -200,6 +206,158 @@ def _create_dmg_image(source: str, output_file: str, volume_name: str) -> str:
     _require("hdiutil")
     _run(["hdiutil", "create", "-volname", volume_name, "-srcfolder", source, "-ov", "-format", "UDZO", output_file])
     return output_file
+
+
+def _png_chunk(tag: bytes, payload: bytes) -> bytes:
+    return struct.pack("!I", len(payload)) + tag + payload + struct.pack("!I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
+
+
+def _write_png_rgb(path: str, width: int, height: int, pixels: list[bytearray]) -> None:
+    raw = b"".join(b"\x00" + bytes(row) for row in pixels)
+    image = b"".join(
+        [
+            b"\x89PNG\r\n\x1a\n",
+            _png_chunk(b"IHDR", struct.pack("!IIBBBBB", width, height, 8, 2, 0, 0, 0)),
+            _png_chunk(b"IDAT", zlib.compress(raw, level=9)),
+            _png_chunk(b"IEND", b""),
+        ]
+    )
+    with open(path, "wb") as handle:
+        handle.write(image)
+
+
+def _write_app_dmg_background(destination_dir: str) -> str:
+    background_dir = os.path.join(destination_dir, ".background")
+    os.makedirs(background_dir, exist_ok=True)
+    background_path = os.path.join(background_dir, "background.png")
+
+    width = 640
+    height = 360
+    background = (247, 247, 244)
+    arrow = (185, 185, 180)
+    shadow = (224, 224, 219)
+    pixels = [bytearray(background * width) for _ in range(height)]
+
+    def paint_rect(x0: int, y0: int, x1: int, y1: int, color: tuple[int, int, int]) -> None:
+        for y in range(max(0, y0), min(height, y1)):
+            row = pixels[y]
+            for x in range(max(0, x0), min(width, x1)):
+                offset = x * 3
+                row[offset : offset + 3] = bytes(color)
+
+    def paint_triangle(mid_x: int, mid_y: int, tip_x: int, half_height: int, color: tuple[int, int, int]) -> None:
+        span = max(1, tip_x - mid_x)
+        for x in range(mid_x, min(width, tip_x + 1)):
+            ratio = (x - mid_x) / span
+            y_radius = max(1, int(half_height * ratio))
+            paint_rect(x, mid_y - y_radius, x + 1, mid_y + y_radius + 1, color)
+
+    paint_rect(238, 180, 400, 192, shadow)
+    paint_triangle(400, 186, 444, 34, shadow)
+    paint_rect(232, 174, 394, 186, arrow)
+    paint_triangle(394, 180, 438, 34, arrow)
+
+    _write_png_rgb(background_path, width, height, pixels)
+    return background_path
+
+
+def _style_app_dmg_window(mount_dir: str, volume_name: str, app_item_name: str) -> None:
+    _require("osascript")
+    script_lines = [
+        'tell application "Finder"',
+        'tell disk "' + _escape_applescript_string(volume_name) + '"',
+        "open",
+        "tell container window",
+        "set current view to icon view",
+        "set toolbar visible to false",
+        "set statusbar visible to false",
+        "set bounds to {120, 120, 760, 480}",
+        "end tell",
+        "set opts to icon view options of container window",
+        "set arrangement of opts to not arranged",
+        "set icon size of opts to 128",
+        'set background picture of opts to file ".background:background.png"',
+        'set position of item "' + _escape_applescript_string(app_item_name) + '" to {170, 180}',
+        'set position of item "Applications" to {470, 180}',
+        "close",
+        "open",
+        "update without registering applications",
+        "delay 1",
+        "end tell",
+        "end tell",
+    ]
+    args = ["osascript"]
+    for line in script_lines:
+        args.extend(["-e", line])
+    _run(args, cwd=mount_dir)
+
+
+def _create_styled_app_dmg_image(source: str, output_file: str, volume_name: str, app_item_name: str) -> str:
+    _require("hdiutil")
+    _write_app_dmg_background(source)
+
+    temp_image = tempfile.NamedTemporaryFile(prefix="easyinstaller-app-dmg-", suffix=".dmg", delete=False)
+    mount_dir = tempfile.mkdtemp(prefix="easyinstaller-app-dmg-mount-")
+    temp_image.close()
+    try:
+        _run(
+            [
+                "hdiutil",
+                "create",
+                "-volname",
+                volume_name,
+                "-srcfolder",
+                source,
+                "-ov",
+                "-format",
+                "UDRW",
+                temp_image.name,
+            ]
+        )
+        _run(["hdiutil", "attach", temp_image.name, "-readwrite", "-noverify", "-noautoopen", "-mountpoint", mount_dir])
+        try:
+            _style_app_dmg_window(mount_dir, volume_name, app_item_name)
+        finally:
+            _run(["hdiutil", "detach", mount_dir])
+
+        if os.path.exists(output_file):
+            os.remove(output_file)
+        _run(["hdiutil", "convert", temp_image.name, "-ov", "-format", "UDZO", "-o", output_file])
+    finally:
+        if os.path.exists(temp_image.name):
+            os.unlink(temp_image.name)
+        shutil.rmtree(mount_dir, ignore_errors=True)
+
+    return output_file
+
+
+def _create_applications_alias(destination_dir: str, alias_name: str = "Applications") -> str:
+    _require("osascript")
+    alias_path = os.path.join(destination_dir, alias_name)
+    if os.path.lexists(alias_path):
+        if os.path.isdir(alias_path) and not os.path.islink(alias_path):
+            shutil.rmtree(alias_path)
+        else:
+            os.unlink(alias_path)
+
+    destination_dir = os.path.abspath(destination_dir)
+    script_lines = [
+        'tell application "Finder"',
+        (
+            'make new alias file at POSIX file "'
+            + _escape_applescript_string(destination_dir)
+            + '" to POSIX file "/Applications" '
+            + 'with properties {name:"'
+            + _escape_applescript_string(alias_name)
+            + '"}'
+        ),
+        "end tell",
+    ]
+    args = ["osascript"]
+    for line in script_lines:
+        args.extend(["-e", line])
+    _run(args)
+    return alias_path
 
 
 def _create_pkg_from_root(

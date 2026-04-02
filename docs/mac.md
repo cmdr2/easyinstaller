@@ -34,6 +34,8 @@ Run: `easyinstaller --source ./build --os mac --arch arm64 --type app-in-dmg --o
 
 `MyApp.dmg` will be written in the current directory.
 
+The mounted DMG includes your `.app` bundle plus a Finder alias named `Applications`, arranged in a styled Finder window with an arrow background between them for the usual drag-to-install flow.
+
 ## pkg
 
 Run: `easyinstaller --source ./build --os mac --arch arm64 --type pkg --output MyApp --app-name "My App"`.

@@ -8,7 +8,13 @@ import tempfile
 
 from ..config import Config
 from .common import log
-from .mac_support import _create_app_bundle, _create_dmg_image, _finalize_mac_output, _prepare_mac_source
+from .mac_support import (
+    _create_app_bundle,
+    _create_applications_alias,
+    _create_styled_app_dmg_image,
+    _finalize_mac_output,
+    _prepare_mac_source,
+)
 
 
 def build_app_in_dmg(cfg: Config) -> str:
@@ -24,7 +30,8 @@ def build_app_in_dmg(cfg: Config) -> str:
     try:
         app_path = os.path.join(temp_root, f"{cfg.app_name}.app")
         _create_app_bundle(cfg, signed_source_root or cfg.source, app_path)
-        _create_dmg_image(temp_root, dmg_output, cfg.app_name)
+        _create_applications_alias(temp_root)
+        _create_styled_app_dmg_image(temp_root, dmg_output, cfg.app_name, f"{cfg.app_name}.app")
     finally:
         if signed_source_root is not None:
             shutil.rmtree(signed_source_root, ignore_errors=True)

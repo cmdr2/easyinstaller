@@ -35,7 +35,13 @@ class TestAppInDmgIntegration:
         mount_dmg(result, mount_path)
         try:
             app_root = mount_path / "TestApp.app"
+            applications_alias = mount_path / "Applications"
+            background_image = mount_path / ".background" / "background.png"
             assert app_root.is_dir()
+            assert applications_alias.exists()
+            assert not applications_alias.is_symlink()
+            assert not applications_alias.is_dir()
+            assert background_image.is_file()
             with open(app_root / "Contents" / "Info.plist", "rb") as handle:
                 plist = plistlib.load(handle)
             assert plist["CFBundleExecutable"] == "myapp"

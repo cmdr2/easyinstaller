@@ -13,6 +13,39 @@ class TestBuildAppInDmg:
         with pytest.raises(RuntimeError, match="app-exec is required"):
             build_app_in_dmg(cfg)
 
+    def test_adds_applications_alias_to_dmg_layout(self, source_dir, output_path, command_spy):
+        calls, patch_run, _patch_subprocess = command_spy
+        patch_run("easyinstaller.builders.mac_support")
+
+        cfg = base_cfg(
+            source_dir,
+            output_path,
+            target_os="mac",
+            target_type="app-in-dmg",
+            arch="arm64",
+            app_name="Test App",
+            app_exec="myapp",
+        )
+        build_app_in_dmg(cfg)
+
+        assert any(call["args"][0] == "osascript" for call in calls)
+        alias_call = next(
+            call
+            for call in calls
+            if call["args"][0] == "osascript"
+            and 'to POSIX file "/Applications"' in " ".join(str(arg) for arg in call["args"])
+        )
+        layout_call = next(
+            call
+            for call in calls
+            if call["args"][0] == "osascript"
+            and "background picture of opts" in " ".join(str(arg) for arg in call["args"])
+        )
+        assert 'name:"Applications"' in " ".join(str(arg) for arg in alias_call["args"])
+        layout_script = " ".join(str(arg) for arg in layout_call["args"])
+        assert 'set position of item "Test App.app" to {170, 180}' in layout_script
+        assert 'set position of item "Applications" to {470, 180}' in layout_script
+
     def test_builds_dmg_and_staples_when_notarized(self, source_dir, output_path, command_spy):
         calls, patch_run, _patch_subprocess = command_spy
         patch_run("easyinstaller.builders.mac_support")
@@ -32,7 +65,8 @@ class TestBuildAppInDmg:
         result = build_app_in_dmg(cfg)
 
         assert result.endswith(".dmg")
-        assert any(call["args"][:2] == ["hdiutil", "create"] for call in calls)
+        assert any(call["args"][:2] == ["hdiutil", "create"] and "UDRW" in call["args"] for call in calls)
+        assert any(call["args"][:2] == ["hdiutil", "convert"] and "UDZO" in call["args"] for call in calls)
         assert any(
             call["args"][:3] == ["xcrun", "notarytool", "submit"] and call["args"][3] == result for call in calls
         )
