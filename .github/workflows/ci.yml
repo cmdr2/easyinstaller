@@ -178,6 +178,11 @@ jobs:
           fi
           echo "APP_VERSION=$version" >> "$GITHUB_ENV"
 
+      - name: Run unit tests
+        shell: bash
+        run: |
+          python -m pytest tests -q
+
       - name: Run integration tests
         shell: bash
         run: |
