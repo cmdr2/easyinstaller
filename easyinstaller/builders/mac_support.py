@@ -206,16 +206,6 @@ def _create_dmg_image(source: str, output_file: str, volume_name: str) -> str:
     return output_file
 
 
-def _write_app_dmg_background(destination_dir: str) -> str:
-    background_dir = os.path.join(destination_dir, ".background")
-    os.makedirs(background_dir, exist_ok=True)
-    background_path = os.path.join(background_dir, "background.png")
-
-    template_path = os.path.join(os.path.dirname(__file__), "app_dmg_background.png")
-    shutil.copyfile(template_path, background_path)
-    return background_path
-
-
 def _style_app_dmg_window(mount_dir: str, app_item_name: str) -> None:
     _require("osascript")
     mount_dir = os.path.abspath(mount_dir)
@@ -231,7 +221,6 @@ def _style_app_dmg_window(mount_dir: str, app_item_name: str) -> None:
         "set opts to icon view options of dmgWindow",
         "set arrangement of opts to not arranged",
         "set icon size of opts to 128",
-        'set background picture of opts to file ".background:background.png" of diskFolder',
         'set position of item "' + _escape_applescript_string(app_item_name) + '" of diskFolder to {170, 180}',
         'set position of item "Applications" of diskFolder to {470, 180}',
         "close dmgWindow",
@@ -248,7 +237,6 @@ def _style_app_dmg_window(mount_dir: str, app_item_name: str) -> None:
 
 def _create_styled_app_dmg_image(source: str, output_file: str, volume_name: str, app_item_name: str) -> str:
     _require("hdiutil")
-    _write_app_dmg_background(source)
 
     temp_image = tempfile.NamedTemporaryFile(prefix="easyinstaller-app-dmg-", suffix=".dmg", delete=False)
     mount_dir = tempfile.mkdtemp(prefix="easyinstaller-app-dmg-mount-")

@@ -1,25 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from easyinstaller.builders import build_app_in_dmg
-from easyinstaller.builders.mac_support import _write_app_dmg_background
 
 from tests.conftest import base_cfg
 
 
 class TestBuildAppInDmg:
-    def test_writes_static_background_image(self, tmp_path):
-        background_path = Path(_write_app_dmg_background(str(tmp_path)))
-        template_path = Path(
-            __import__("easyinstaller.builders.mac_support", fromlist=["__file__"]).__file__
-        ).with_name("app_dmg_background.png")
-
-        assert background_path.is_file()
-        assert background_path.read_bytes() == template_path.read_bytes()
-
     def test_requires_exec(self, source_dir, output_path):
         cfg = base_cfg(source_dir, output_path, target_os="mac", target_type="app-in-dmg", arch="arm64")
         with pytest.raises(RuntimeError, match="app-exec is required"):
@@ -47,13 +35,13 @@ class TestBuildAppInDmg:
             if call["args"][0] == "osascript"
             and 'to POSIX file "/Applications"' in " ".join(str(arg) for arg in call["args"])
         )
+        assert 'name:"Applications"' in " ".join(str(arg) for arg in alias_call["args"])
         layout_call = next(
             call
             for call in calls
             if call["args"][0] == "osascript"
-            and "background picture of opts" in " ".join(str(arg) for arg in call["args"])
+            and 'set position of item "Applications"' in " ".join(str(arg) for arg in call["args"])
         )
-        assert 'name:"Applications"' in " ".join(str(arg) for arg in alias_call["args"])
         layout_script = " ".join(str(arg) for arg in layout_call["args"])
         assert 'set position of item "Test App.app" of diskFolder to {170, 180}' in layout_script
         assert 'set position of item "Applications" of diskFolder to {470, 180}' in layout_script
