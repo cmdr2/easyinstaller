@@ -22,6 +22,6 @@ Run: `easyinstaller --source .\build --os windows --arch x86_64 --type tar.gz --
 
 The generated NSIS installer is a per-user install. It defaults to `%LOCALAPPDATA%\Programs\<App Name>`, writes uninstall metadata under `HKCU`, and does not request administrator elevation.
 
-If `--app-exec` is set, the installer finish page shows a checkbox to start that executable after setup completes.
+If `--app-exec` is set, the installer finish page shows checkboxes to start that executable after setup completes and to create a desktop shortcut for it.
 
 `myapp-setup.exe` will be written in the current directory.

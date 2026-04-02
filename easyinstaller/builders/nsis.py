@@ -28,14 +28,28 @@ def build_nsis(cfg: Config) -> str:
     install_name = _escape_nsis_string(_normalise_nsis_component(cfg.app_name))
     display_version = _escape_nsis_string(cfg.app_version)
     finish_page_macros = ""
+    shortcut_function = ""
+    shortcut_cleanup = ""
     if cfg.app_exec:
         app_exec_win = cfg.app_exec.replace("/", "\\")
         finish_page_macros = "\n".join(
             [
                 f'!define MUI_FINISHPAGE_RUN "$INSTDIR\\{_escape_nsis_string(app_exec_win)}"',
                 f'!define MUI_FINISHPAGE_RUN_TEXT "Launch {display_name}"',
+                "!define MUI_FINISHPAGE_SHOWREADME",
+                '!define MUI_FINISHPAGE_SHOWREADME_TEXT "Create a desktop shortcut"',
+                "!define MUI_FINISHPAGE_SHOWREADME_FUNCTION easyinstallerCreateDesktopShortcut",
             ]
         )
+        shortcut_function = "\n".join(
+            [
+                "Function easyinstallerCreateDesktopShortcut",
+                "  SetShellVarContext current",
+                f'  CreateShortcut "$DESKTOP\\{install_name}.lnk" "$INSTDIR\\{_escape_nsis_string(app_exec_win)}"',
+                "FunctionEnd",
+            ]
+        )
+        shortcut_cleanup = f'    Delete "$DESKTOP\\{install_name}.lnk"'
 
     install_lines: list[str] = []
     uninstall_lines: list[str] = []
@@ -63,6 +77,8 @@ def build_nsis(cfg: Config) -> str:
         app_version=display_version,
         output_file=output_file,
         finish_page_macros=finish_page_macros,
+        shortcut_function=shortcut_function,
+        shortcut_cleanup=shortcut_cleanup,
         install_files="\n".join(install_lines),
         uninstall_files="\n".join(uninstall_lines),
     )
@@ -99,6 +115,8 @@ SilentUnInstall normal
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
+{shortcut_function}
+
 Section "Install"
 {install_files}
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -115,6 +133,7 @@ Section "Uninstall"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
     SetShellVarContext current
+{shortcut_cleanup}
     Delete "$SMPROGRAMS\{install_name}\Uninstall.lnk"
     RMDir "$SMPROGRAMS\{install_name}"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{install_name}"

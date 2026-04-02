@@ -198,3 +198,9 @@ class TestBuildNsis:
 
         assert '!define MUI_FINISHPAGE_RUN "$INSTDIR\\bin\\myapp.exe"' in captured["script"]
         assert '!define MUI_FINISHPAGE_RUN_TEXT "Launch My App"' in captured["script"]
+        assert "!define MUI_FINISHPAGE_SHOWREADME" in captured["script"]
+        assert '!define MUI_FINISHPAGE_SHOWREADME_TEXT "Create a desktop shortcut"' in captured["script"]
+        assert "!define MUI_FINISHPAGE_SHOWREADME_FUNCTION easyinstallerCreateDesktopShortcut" in captured["script"]
+        assert "Function easyinstallerCreateDesktopShortcut" in captured["script"]
+        assert 'CreateShortcut "$DESKTOP\\My App.lnk" "$INSTDIR\\bin\\myapp.exe"' in captured["script"]
+        assert 'Delete "$DESKTOP\\My App.lnk"' in captured["script"]
