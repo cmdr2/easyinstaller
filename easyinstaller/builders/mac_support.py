@@ -6,12 +6,10 @@ import os
 import plistlib
 import shutil
 import stat
-import struct
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import PurePosixPath
-import zlib
 
 from ..config import Config
 from .common import _require, _run
@@ -208,56 +206,13 @@ def _create_dmg_image(source: str, output_file: str, volume_name: str) -> str:
     return output_file
 
 
-def _png_chunk(tag: bytes, payload: bytes) -> bytes:
-    return struct.pack("!I", len(payload)) + tag + payload + struct.pack("!I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
-
-
-def _write_png_rgb(path: str, width: int, height: int, pixels: list[bytearray]) -> None:
-    raw = b"".join(b"\x00" + bytes(row) for row in pixels)
-    image = b"".join(
-        [
-            b"\x89PNG\r\n\x1a\n",
-            _png_chunk(b"IHDR", struct.pack("!IIBBBBB", width, height, 8, 2, 0, 0, 0)),
-            _png_chunk(b"IDAT", zlib.compress(raw, level=9)),
-            _png_chunk(b"IEND", b""),
-        ]
-    )
-    with open(path, "wb") as handle:
-        handle.write(image)
-
-
 def _write_app_dmg_background(destination_dir: str) -> str:
     background_dir = os.path.join(destination_dir, ".background")
     os.makedirs(background_dir, exist_ok=True)
     background_path = os.path.join(background_dir, "background.png")
 
-    width = 640
-    height = 360
-    background = (247, 247, 244)
-    arrow = (185, 185, 180)
-    shadow = (224, 224, 219)
-    pixels = [bytearray(background * width) for _ in range(height)]
-
-    def paint_rect(x0: int, y0: int, x1: int, y1: int, color: tuple[int, int, int]) -> None:
-        for y in range(max(0, y0), min(height, y1)):
-            row = pixels[y]
-            for x in range(max(0, x0), min(width, x1)):
-                offset = x * 3
-                row[offset : offset + 3] = bytes(color)
-
-    def paint_triangle(mid_x: int, mid_y: int, tip_x: int, half_height: int, color: tuple[int, int, int]) -> None:
-        span = max(1, tip_x - mid_x)
-        for x in range(mid_x, min(width, tip_x + 1)):
-            ratio = (x - mid_x) / span
-            y_radius = max(1, int(half_height * ratio))
-            paint_rect(x, mid_y - y_radius, x + 1, mid_y + y_radius + 1, color)
-
-    paint_rect(238, 180, 400, 192, shadow)
-    paint_triangle(400, 186, 444, 34, shadow)
-    paint_rect(232, 174, 394, 186, arrow)
-    paint_triangle(394, 180, 438, 34, arrow)
-
-    _write_png_rgb(background_path, width, height, pixels)
+    template_path = os.path.join(os.path.dirname(__file__), "app_dmg_background.png")
+    shutil.copyfile(template_path, background_path)
     return background_path
 
 

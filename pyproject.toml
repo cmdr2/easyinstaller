@@ -17,6 +17,9 @@ easyinstaller = "easyinstaller.cli:main"
 where = ["."]
 include = ["easyinstaller*"]
 
+[tool.setuptools.package-data]
+easyinstaller = ["builders/*.png"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests", "tests_integration"]
 markers = [

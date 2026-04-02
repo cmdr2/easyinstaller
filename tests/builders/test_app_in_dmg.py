@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from easyinstaller.builders import build_app_in_dmg
+from easyinstaller.builders.mac_support import _write_app_dmg_background
 
 from tests.conftest import base_cfg
 
 
 class TestBuildAppInDmg:
+    def test_writes_static_background_image(self, tmp_path):
+        background_path = Path(_write_app_dmg_background(str(tmp_path)))
+        template_path = Path(
+            __import__("easyinstaller.builders.mac_support", fromlist=["__file__"]).__file__
+        ).with_name("app_dmg_background.png")
+
+        assert background_path.is_file()
+        assert background_path.read_bytes() == template_path.read_bytes()
+
     def test_requires_exec(self, source_dir, output_path):
         cfg = base_cfg(source_dir, output_path, target_os="mac", target_type="app-in-dmg", arch="arm64")
         with pytest.raises(RuntimeError, match="app-exec is required"):
