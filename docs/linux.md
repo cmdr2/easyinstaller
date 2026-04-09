@@ -47,8 +47,8 @@ Run: `easyinstaller --source ./build --os linux --arch x86_64 --type tar.gz --ou
 
 ## snap
 
-1. Install Snapcraft with `sudo snap install snapcraft --classic`, or follow https://snapcraft.io/docs/installing-snapcraft.
-2. Install the `core24` base if your environment does not already have it: `sudo snap install core24`.
+1. Install the snap tooling. On Debian or Ubuntu: `sudo apt-get update && sudo apt-get install -y snapd squashfs-tools`.
+2. Ensure the `snap` command is available on `PATH`.
 3. Run: `easyinstaller --source ./build --os linux --arch x86_64 --type snap --output myapp --app-name "My App" --app-version 1.0.0 --app-exec myapp`.
 
 `myapp.snap` will be written in the current directory.

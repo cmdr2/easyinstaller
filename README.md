@@ -94,7 +94,7 @@ Other formats require the corresponding tool to be installed on the build machin
 | `rpm`      | `rpmbuild`        |
 | `appimage` | `appimagetool`    |
 | `flatpak`  | `flatpak`, `flatpak-builder` |
-| `snap`     | `snapcraft`       |
+| `snap`     | `snap` (from `snapd`) and `squashfs-tools` |
 | `dmg`      | `hdiutil` (macOS) |
 | `pkg`, `app-in-pkg` | `pkgbuild`, `productbuild` (macOS) |
 | mac notarization | `codesign`, `xcrun notarytool`, `xcrun stapler` (macOS) |

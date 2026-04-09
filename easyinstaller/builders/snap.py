@@ -14,7 +14,7 @@ SNAP_BASE = "core24"
 
 
 def build_snap(cfg: Config) -> str:
-    _require("snapcraft")
+    _require("snap")
     if not cfg.app_exec:
         raise RuntimeError("--app-exec is required for Snap")
 
@@ -22,13 +22,14 @@ def build_snap(cfg: Config) -> str:
     log.info("Creating Snap: %s", output_file)
 
     sanitised = _sanitise_name(cfg.app_name)
+    built_name = os.path.basename(output_file)
     snap_dir = tempfile.mkdtemp(prefix="easyinstaller-snap-")
     try:
-        shutil.copytree(cfg.source, os.path.join(snap_dir, "source"))
-        snap_meta = os.path.join(snap_dir, "snap")
+        shutil.copytree(cfg.source, snap_dir, dirs_exist_ok=True)
+        snap_meta = os.path.join(snap_dir, "meta")
         os.makedirs(snap_meta)
 
-        with open(os.path.join(snap_meta, "snapcraft.yaml"), "w") as handle:
+        with open(os.path.join(snap_meta, "snap.yaml"), "w") as handle:
             handle.write(
                 f"name: {sanitised}\n"
                 f"version: '{cfg.app_version}'\n"
@@ -39,24 +40,15 @@ def build_snap(cfg: Config) -> str:
                 f"grade: stable\n"
                 f"confinement: strict\n"
                 f"\n"
-                f"parts:\n"
-                f"  {sanitised}:\n"
-                f"    plugin: dump\n"
-                f"    source: source/\n"
-                f"\n"
                 f"apps:\n"
                 f"  {sanitised}:\n"
                 f"    command: {cfg.app_exec}\n"
             )
 
-        _run(["snapcraft", "pack", "--destructive-mode"], cwd=snap_dir)
+        _run(["snap", "pack", "--filename", built_name, snap_dir, snap_dir], cwd=snap_dir)
 
-        built = None
-        for filename in os.listdir(snap_dir):
-            if filename.endswith(".snap"):
-                built = os.path.join(snap_dir, filename)
-                break
-        if not built:
+        built = os.path.join(snap_dir, built_name)
+        if not os.path.isfile(built):
             raise RuntimeError("Snap build failed - no output found")
         shutil.copy2(built, output_file)
     finally:

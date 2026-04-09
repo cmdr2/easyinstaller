@@ -16,7 +16,7 @@ pytestmark = pytest.mark.integration
 class TestSnapIntegration:
     def test_builds_snap_bundle(self, source_dir, tmp_path):
         require_host_os("linux")
-        require_commands("snapcraft")
+        require_commands("snap")
 
         cfg = base_cfg(
             source_dir,
